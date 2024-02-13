@@ -71,6 +71,7 @@ class MessageServer (
 
                 } catch (e: IOException) {
                     Log.d("SERVER-RECEIVE", e.toString())
+                    break
                 }
 
             }

@@ -1,5 +1,9 @@
 package com.example.screenconnect.screens
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Rect
 import android.net.Uri
 import android.net.wifi.p2p.WifiP2pDeviceList
 import android.os.Handler
@@ -8,7 +12,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import androidx.core.graphics.scale
 import androidx.lifecycle.ViewModel
 import com.example.screenconnect.models.PhoneScreen
 import com.example.screenconnect.models.VirtualScreen
@@ -19,7 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 
-class SharedViewModel : ViewModel() {
+class SharedViewModel() : ViewModel() {
 
     var text by mutableStateOf("Hello")
     var infoText by mutableStateOf("Info");
@@ -51,6 +58,9 @@ class SharedViewModel : ViewModel() {
     var virtualWidth by mutableStateOf(0)
 
     var phoneNr by mutableStateOf(0)
+
+    var showImage by mutableStateOf(false)
+    var sharedImage by mutableStateOf<Bitmap>(Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888))
 
     fun sendText(message: String){
         Log.d("SEND-TEXT", "Call")
@@ -152,7 +162,7 @@ class SharedViewModel : ViewModel() {
             Log.d("SERVER-HOST", host)
             isServerRunning = true;
 
-            messageClient = MessageClient(thisPhone, host,
+            messageClient = MessageClient(thisPhone, host, this,
                 { message ->
                 // Handle the received message
                 Log.d("MESSAGE", "Received: $message")
@@ -164,6 +174,11 @@ class SharedViewModel : ViewModel() {
                 { file ->
                     // Handle the received image
                     Log.d("FILE", file.path)
+
+                    imageUri = Uri.fromFile(file)
+
+                    val cropRect = Rect(thisPhone.locationX, thisPhone.locationY, thisPhone.width, thisPhone.height)
+                    processReceivedImage(file)
 
                 })
 
@@ -213,6 +228,32 @@ class SharedViewModel : ViewModel() {
         messageServer.sendClientInfo(updatedPhone)
         Thread.sleep(100)
         messageServer.sendScreenInfo(virtualScreen)
+    }
+
+    fun processReceivedImage(file: File) {
+        // Decode the file into a Bitmap
+        val options = BitmapFactory.Options()
+        options.inPreferredConfig = Bitmap.Config.ARGB_8888 // Set bitmap config
+
+        val bitmap = BitmapFactory.decodeFile(file.path, options).scale(2160, 2192)
+
+        Log.d("Bitmap height", bitmap.height.toString())
+        Log.d("Bitmap width", bitmap.width.toString())
+
+        if (bitmap != null) {
+            // Crop the Bitmap
+            val croppedBitmap = Bitmap.createBitmap(
+                bitmap,
+                thisPhone.locationX,
+                thisPhone.locationY,
+                thisPhone.width,
+                thisPhone.height
+            )
+            sharedImage = croppedBitmap
+            showImage = true
+        } else {
+            // Failed to decode file into Bitmap
+        }
     }
 
 }

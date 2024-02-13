@@ -3,6 +3,7 @@ package com.example.screenconnect.network
 import android.os.Environment
 import android.util.Log
 import com.example.screenconnect.models.PhoneScreen
+import com.example.screenconnect.screens.SharedViewModel
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInput
@@ -21,6 +22,7 @@ import java.net.Socket
 class MessageClient (
     private val thisPhone: PhoneScreen,
     private val host: String,
+    private val sharedViewModel: SharedViewModel,
     private val messageReceivedCallback: (String) -> Unit,
     private val imageReceivedCallback: (File) -> Unit
 ) : Thread(){

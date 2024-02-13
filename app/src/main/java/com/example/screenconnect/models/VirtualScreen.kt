@@ -7,11 +7,21 @@ class VirtualScreen {
     var vWidth: Int = 0
     var phones = mutableListOf<PhoneScreen>()
 
+    var DPI: Int = 0
+
     var phoneCounter = 1
 
     fun addPhone(phone: PhoneScreen): PhoneScreen {
         if(notAdded(phone)){
             phones.add(phone)
+
+            if(phones.size == 1){
+                DPI = phone.DPI
+                Log.d("DPI", phone.DPI.toString())
+            }
+            else{
+                phone.scale = DPI / phone.DPI
+            }
 
             phone.locationX = vWidth
 

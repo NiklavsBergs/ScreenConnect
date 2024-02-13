@@ -108,7 +108,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             ScreenConnectTheme {
 
-                settingsScreen(sharedViewModel, connection)
+                Navigation(sharedViewModel, connection)
+
+//                if(!sharedViewModel.showImage){
+//                    settingsScreen(sharedViewModel, connection)
+//                }
+//                else{
+//                    sharedScreen(sharedViewModel)
+//                }
 
             }
         }

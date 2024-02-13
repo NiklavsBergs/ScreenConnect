@@ -1,12 +1,6 @@
-package com.example.screenconnect
+package com.example.screenconnect.screens
 
-import android.app.AlertDialog
-import android.content.Context
-import android.content.Intent
-import android.database.Cursor
 import android.net.Uri
-import android.provider.MediaStore
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -20,23 +14,24 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.screenconnect.network.Connection
-import com.example.screenconnect.screens.SharedViewModel
 import com.example.screenconnect.util.getRealPathFromUri
 import com.example.screenconnect.util.wifiPopup
 import java.io.File
-import kotlin.system.exitProcess
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun settingsScreen(sharedViewModel: SharedViewModel, connection: Connection) {
+fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewModel, connection: Connection) {
     val context = LocalContext.current
+
+    if(sharedViewModel.showImage){
+        navController.navigate(Screen.SharedScreen.route)
+        sharedViewModel.showImage = false
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (sharedViewModel.isConnected) {
@@ -144,17 +139,22 @@ fun settingsScreen(sharedViewModel: SharedViewModel, connection: Connection) {
                         val imagePath = uri?.let { getRealPathFromUri(it, context) }
                         val imageFile = imagePath?.let { File(it) }
                         sharedViewModel.sendImage(imageFile!!)
+                        if(sharedViewModel.isGroupOwner){
+                            sharedViewModel.processReceivedImage(File(imagePath))
+                        }
                     }
 
 //                    AsyncImage(
-//                        model = imageUri,
+//                        model = sharedViewModel.imageUri,
 //                        contentDescription = null,
 //                        modifier = Modifier
 //                            .padding(4.dp)
-//                            .fillMaxHeight().width(100.dp)
+//                            .width(100.dp)
+//                            .height(100.dp)
 //                            .clip(RoundedCornerShape(12.dp)),
 //                        contentScale = ContentScale.Crop,
 //                    )
+
                     Button(onClick = {
                         launcher.launch("image/*")
                     }) {
