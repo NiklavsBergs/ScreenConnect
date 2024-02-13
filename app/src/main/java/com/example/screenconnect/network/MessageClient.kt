@@ -1,24 +1,35 @@
 package com.example.screenconnect.network
 
+import android.os.Environment
 import android.util.Log
 import com.example.screenconnect.models.PhoneScreen
 import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.DataInput
 import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.Integer.min
 import java.net.InetSocketAddress
 import java.net.Socket
 
 class MessageClient (
     private val thisPhone: PhoneScreen,
     private val host: String,
-    private val messageReceivedCallback: (String) -> Unit
+    private val messageReceivedCallback: (String) -> Unit,
+    private val imageReceivedCallback: (File) -> Unit
 ) : Thread(){
     var socket: Socket = Socket()
     var inputStream: InputStream? = null
     var outputStream: OutputStream? = null
+
+    var socketDOS: DataOutputStream? = null
+    var socketDIS: DataInputStream? = null
 
     override fun run(){
         Log.d("HOST",host)
@@ -27,6 +38,9 @@ class MessageClient (
             socket?.connect(InetSocketAddress(host, 8888), 500)
             inputStream = socket?.getInputStream()
             outputStream = socket?.getOutputStream()
+
+            socketDOS = DataOutputStream(BufferedOutputStream(outputStream))
+            socketDIS = DataInputStream(BufferedInputStream(inputStream))
 
             Log.d("CLIENT-START",host)
 
@@ -41,50 +55,20 @@ class MessageClient (
         Log.d("CLIENT-RECEIVE", "Running")
         while(socket!=null  && !socket!!.isClosed){
             try{
-                val buffer: ByteArray = ByteArray(1024)
-                val bytes = inputStream?.read(buffer)
 
-                // Process the received message
-                if (bytes != null && bytes > 0) {
-                    val message = String(buffer, 0,bytes)
-                    if(message.compareTo("Image") == 0){
-                        receiveImage(inputStream!!)
-                    }
-                    messageReceivedCallback(message)
-                    Log.d("SOCKET-CLOSED", socket?.isClosed.toString())
+                val type = socketDIS?.readUTF()
 
-//                   else {
-//                       messageReceivedCallback("")
-//                   }
-//                    val receivedData = processData(buffer, bytes)
-//                    receivedData?.let {
-//                        when (it) {
-//                            is String -> {
-//                                // Received a string message
-//                                messageReceivedCallback(it, null)
-//                                Log.d("CLIENT-RECEIVE-MSG", it)
-//                            }
-//                            is ByteArray -> {
-//                                // Received an image
-//                                // Handle the ByteArray accordingly
-//                                // You might want to save it to a file or display it
-//                                Log.d("CLIENT-RECEIVE-IMG", "received")
-//                                handleImageReceive(inputStream!!, it)
-//                                Log.d("CLIENT-RECEIVE-IMG", "saved")
-//
-//                                val imagePath = saveImage(it)
-//                                messageReceivedCallback(" ", imagePath)
-//                            }
-//                            else -> {
-//                                // Handle unknown data type
-//                                Log.d("CLIENT-RECEIVE", "Unknown data type")
-//                            }
-//                        }
-//                    }
+                if(type?.compareTo("Info") == 0) {
+                    Log.d("CLIENT-RECEIVE","Receiving info")
+                    val message = socketDIS?.readUTF()
+                    messageReceivedCallback(message!!)
                 }
-//                   else {
-//                       messageReceivedCallback("")
-//                   }
+                else if (type?.compareTo("Image") == 0){
+                    Log.d("CLIENT-RECEIVE","Receiving image")
+                    val savedFile = receiveImage()
+                    imageReceivedCallback(savedFile)
+                }
+
             } catch (e: IOException) {
                 Log.d("CLIENT-RECEIVE-ERROR", e.toString())
                 socket.close()
@@ -115,10 +99,18 @@ class MessageClient (
 
 
         try{
-            var phoneInfo = "PhoneInfo:" + phone.height + "," + phone.width + "," + phone.DPI + "," + phone.phoneName + "," + phone.id
-            outputStream?.write(phoneInfo.toByteArray())
+            if(socketDOS != null) {
+                socketDOS!!.writeUTF("Info")
 
-            Log.d("CLIENT-SEND-INFO", phoneInfo)
+                var phoneInfo =
+                    "PhoneInfo:" + phone.height + "," + phone.width + "," + phone.DPI + "," + phone.phoneName + "," + phone.id
+                //outputStream?.write(phoneInfo.toByteArray())
+                socketDOS!!.writeUTF(phoneInfo)
+
+                socketDOS!!.flush()
+
+                Log.d("CLIENT-SEND-INFO", phoneInfo)
+            }
         }
         catch (e: IOException){
             Log.d("CLIENT-SEND-ERROR", e.toString())
@@ -126,112 +118,57 @@ class MessageClient (
         Log.d("CLIENT-SEND-SOCKET-CLOSED", socket?.isClosed.toString())
     }
 
-    fun sendImage(imagePath: String) {
-        try {
-            val imageFile = File(imagePath)
-            val imageBytes = imageFile.readBytes()
+    fun sendImage(file: File){
 
-            outputStream?.write("1".toByteArray()) // Use 1 to indicate an image
-            outputStream?.write(imageBytes)
-            outputStream?.flush()
-        } catch (e: IOException) {
-            Log.d("CLIENT-SEND-ERROR", e.toString())
-        }
-    }
+        if(socketDOS != null) {
+            socketDOS!!.writeUTF("Image")
 
-    private fun processData(buffer: ByteArray, length: Int): Any? {
-        return if (buffer.isNotEmpty()) {
-            when (buffer[0]) {
-                '0'.toByte() -> String(buffer, 1, length - 1) // String data
-                '1'.toByte() -> buffer.copyOfRange(1, length) // Image data
-                else -> null // Unknown type
+            socketDOS!!.writeUTF(file.name)
+
+            socketDOS!!.writeLong(file.length())
+
+            Log.d("SERVER-SEND-IMAGE", file.name)
+
+            val fileIS = FileInputStream(file)
+            val bufferArray = ByteArray(5_000_000)
+            var lengthRead: Int
+
+            while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
+                socketDOS!!.write(bufferArray, 0, lengthRead)
             }
-        } else {
-            null
+            fileIS.close()
         }
     }
 
-    private fun handleImageReceive(inputStream: InputStream, initialBytes: ByteArray) {
-        val imageBuffer = mutableListOf<Byte>().apply {
-            addAll(initialBytes.asList())
-        }
+    fun receiveImage(): File{
 
-        val sizeHeaderBuffer = ByteArray(1024)
-        val sizeHeaderSize = inputStream.read(sizeHeaderBuffer)
-        val sizeHeaderString = sizeHeaderBuffer.decodeToString(0, sizeHeaderSize!!)
-        val imageSize = sizeHeaderString.toInt()
+        val fileName = socketDIS?.readUTF()
 
-        var totalBytesRead = initialBytes.size
+        var fileLength = socketDIS?.readLong()
 
-        var bytesRead: Int = 0
-        val buffer = ByteArray(1024)
+        val fileToSave = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath, fileName)
+        val fileOutputStream = FileOutputStream(fileToSave)
+        val bufferArray = ByteArray(5_000_000)
 
-        try {
-            while (totalBytesRead < imageSize) {
-                val bytesRead = inputStream.read(buffer)
-                if (bytesRead == -1) {
-                    // Handle unexpected end of stream
-                    break
-                }
-                imageBuffer.addAll(buffer.copyOfRange(0, bytesRead).asList())
-                totalBytesRead += bytesRead
+        Log.d("CLIENT-SAVE-IMAGE", fileToSave.path)
+
+        if(fileLength != null) {
+            while (fileLength > 0) {
+                val bytesRead =
+                    socketDIS?.read(bufferArray, 0, min(fileLength.toInt(), bufferArray.size))
+                if (bytesRead == -1) break
+                fileOutputStream.write(bufferArray, 0, bytesRead!!)
+                fileLength -= bytesRead!!
             }
-
-            val imageBytes = imageBuffer.toByteArray()
-            val imagePath = saveImage(imageBytes)
-            //messageReceivedCallback(" ", imagePath)
-        } catch (e: IOException) {
-            Log.e("CLIENT-RECEIVE-IMG", "Error receiving image: ${e.message}")
         }
+
+        fileOutputStream.flush()
+        fileOutputStream.close()
+        Log.d("CLIENT-RECEIVE","Image saved")
+
+        return fileToSave
     }
 
-    fun receiveImage(inputStream: InputStream){
-        val socketDIS = DataInputStream(BufferedInputStream(inputStream))
-
-    }
-
-
-    private fun saveImage(imageBytes: ByteArray): String {
-        Log.d("CLIENT-SAVE", "Image bytes length: ${imageBytes.size}")
-        val imageFileName = "received_image_${System.currentTimeMillis()}.jpg"
-//        val f = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath +
-//                "/${context.packageName}/wifip2pshared-${System.currentTimeMillis()}.jpg")
-//
-//        Log.d("CLIENT-SAVE", "Dir create")
-//        val dirs = File(f.parent)
-//        dirs.takeIf { !it.exists() }?.apply {
-//            mkdirs()
-//        }
-
-        Log.d("CLIENT-SAVE", "File create")
-        //f.createNewFile()
-
-
-
-
-
-//        Log.d("PATH", storageDir.path)
-//        if (!storageDir.exists()) {
-//            if (storageDir.mkdirs()) {
-//                Log.d("CLIENT-SAVE", "Storage directory created successfully.")
-//            } else {
-//                Log.e("CLIENT-SAVE", "Failed to create storage directory.")
-//            }
-//        }
-//
-//        if (!storageDir.isDirectory) {
-//            // The path is not a directory, handle this case accordingly
-//            Log.e("CLIENT-SAVE", "Error: Storage directory is not a directory.")
-//            return ""
-//        }
-
-        Log.d("CLIENT-SAVE", "Bef write")
-        //val imageFile = File(storageDir, imageFileName)
-        //f.writeBytes(imageBytes)
-
-        //return f.absolutePath
-        return ""
-    }
 
     fun close() {
         try {

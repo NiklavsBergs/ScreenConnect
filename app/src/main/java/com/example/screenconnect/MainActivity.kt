@@ -69,8 +69,6 @@ class MainActivity : ComponentActivity() {
 
     //var text by mutableStateOf("Hello")
 
-    var imageUri by mutableStateOf<Uri?>(null)
-
     lateinit var connection: Connection
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -96,7 +94,7 @@ class MainActivity : ComponentActivity() {
             sharedViewModel.infoText = "Wifi Enabled"
         }
 
-        if (!isLocationEnabled(context = this)) {
+        if (!isLocationEnabled(this)) {
             Log.d("Location Popup", "Location services are disabled")
             locationPopup(this)
         }

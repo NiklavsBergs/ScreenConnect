@@ -3,7 +3,12 @@ package com.example.screenconnect
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.database.Cursor
+import android.net.Uri
+import android.provider.MediaStore
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,12 +20,17 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.screenconnect.network.Connection
 import com.example.screenconnect.screens.SharedViewModel
+import com.example.screenconnect.util.getRealPathFromUri
 import com.example.screenconnect.util.wifiPopup
+import java.io.File
 import kotlin.system.exitProcess
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,15 +136,16 @@ fun settingsScreen(sharedViewModel: SharedViewModel, connection: Connection) {
             )
 
             //Image select and display
-//                    val launcher = rememberLauncherForActivityResult(
-//                        contract =
-//                        ActivityResultContracts.GetContent()
-//                    ) { uri: Uri? ->
-//                        imageUri = uri
-//                        val imagePath = uri?.let { getRealPathFromUri(it) }
-//                        imageUri?.let { sendImage(it) }
-//                    }
-//
+                    val launcher = rememberLauncherForActivityResult(
+                        contract =
+                        ActivityResultContracts.GetContent()
+                    ) { uri: Uri? ->
+                        sharedViewModel.imageUri = uri
+                        val imagePath = uri?.let { getRealPathFromUri(it, context) }
+                        val imageFile = imagePath?.let { File(it) }
+                        sharedViewModel.sendImage(imageFile!!)
+                    }
+
 //                    AsyncImage(
 //                        model = imageUri,
 //                        contentDescription = null,
@@ -144,10 +155,16 @@ fun settingsScreen(sharedViewModel: SharedViewModel, connection: Connection) {
 //                            .clip(RoundedCornerShape(12.dp)),
 //                        contentScale = ContentScale.Crop,
 //                    )
+                    Button(onClick = {
+                        launcher.launch("image/*")
+                    }) {
+                        Text(text = "select image")
+                    }
+
 //                    Button(onClick = {
-//                        launcher.launch("image/*")
+//                        sharedViewModel.sendPhoneInfo()
 //                    }) {
-//                        Text(text = "select image")
+//                        Text(text = "send info")
 //                    }
 
             Button(
@@ -160,29 +177,8 @@ fun settingsScreen(sharedViewModel: SharedViewModel, connection: Connection) {
             }
         }
     }
+
 }
 
-//fun wifiPopup(context: Context){
-//    val builder = AlertDialog.Builder(
-//        context
-//    )
-//    builder.setTitle("Screen Connect")
-//    builder.setMessage("WiFi is off, but is needed for this application. Do you want to turn it on?")
-//    builder.setPositiveButton(
-//        "Enable WiFi"
-//    ) { dialogInterface, i ->
-//        context.startActivity(
-//            Intent(
-//                Settings.ACTION_WIFI_SETTINGS
-//            )
-//        )
-//    }
-//    builder.setNegativeButton(
-//        "Exit"
-//    ) { dialogInterface, i ->
-//        context.startActivity(
-//            exitProcess(0)
-//        )
-//    }
-//    builder.create().show()
-//}
+
+

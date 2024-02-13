@@ -1,5 +1,6 @@
 package com.example.screenconnect.screens
 
+import android.net.Uri
 import android.net.wifi.p2p.WifiP2pDeviceList
 import android.os.Handler
 import android.util.Log
@@ -16,11 +17,13 @@ import com.example.screenconnect.network.MessageServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 
 class SharedViewModel : ViewModel() {
 
     var text by mutableStateOf("Hello")
     var infoText by mutableStateOf("Info");
+    var imageUri by mutableStateOf<Uri?>(null)
 
     var host by mutableStateOf("")
 
@@ -63,6 +66,33 @@ class SharedViewModel : ViewModel() {
             } else {
                 clientScope.launch {
                     messageClient.send(message)
+                    Log.d("MESSAGE-CLIENT", "Sent")
+                }
+            }
+        }
+    }
+
+    fun sendPhoneInfo(){
+        serverScope.launch {
+            messageClient.sendPhoneInfo(thisPhone)
+            Log.d("MESSAGE-SERVER", "Info Sent")
+        }
+    }
+
+    fun sendImage(file: File){
+        Log.d("SEND-IMAGE", "Call")
+        if(!isServerRunning){
+            startServer()
+        }
+        else{
+            if (isGroupOwner) {
+                serverScope.launch {
+                    messageServer.sendImage(file)
+                    Log.d("MESSAGE-SERVER", "Image Sent")
+                }
+            } else {
+                clientScope.launch {
+                    messageClient.sendImage(file)
                     Log.d("MESSAGE-CLIENT", "Sent")
                 }
             }
@@ -122,14 +152,21 @@ class SharedViewModel : ViewModel() {
             Log.d("SERVER-HOST", host)
             isServerRunning = true;
 
-            messageClient = MessageClient(thisPhone, host) { message ->
+            messageClient = MessageClient(thisPhone, host,
+                { message ->
                 // Handle the received message
                 Log.d("MESSAGE", "Received: $message")
                 text = message;
 
                 parseMessageFromServer(message)
 
-            }
+                },
+                { file ->
+                    // Handle the received image
+                    Log.d("FILE", file.path)
+
+                })
+
 
             messageClient.start()
         }, 1000)

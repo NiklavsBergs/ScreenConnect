@@ -3,6 +3,7 @@ package com.example.screenconnect.util
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.database.Cursor
 import android.hardware.display.DisplayManager
 import android.location.LocationManager
 import android.net.Uri
@@ -90,4 +91,16 @@ fun isLocationEnabled(context: Context): Boolean {
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
             locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+}
+
+fun getRealPathFromUri(uri: Uri, context: Context): String? {
+    var filePath: String? = null
+
+    val cursor: Cursor? = context.contentResolver.query(uri, null, null, null, null)
+    cursor?.use {
+        it.moveToFirst()
+        val columnIndex = it.getColumnIndex(MediaStore.Images.ImageColumns.DATA)
+        filePath = it.getString(columnIndex)
+    }
+    return filePath
 }

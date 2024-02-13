@@ -1,11 +1,19 @@
 package com.example.screenconnect.network
 
 import android.net.Uri
+import android.os.Environment
 import android.util.Log
 import com.example.screenconnect.models.PhoneScreen
 import com.example.screenconnect.models.VirtualScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -22,6 +30,9 @@ class MessageServer (
     var inputStream: InputStream? = null
     var outputStream: OutputStream? = null
 
+    var socketDOS: DataOutputStream? = null
+    var socketDIS: DataInputStream? = null
+
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     override fun run(){
@@ -31,8 +42,12 @@ class MessageServer (
                 socket = serverSocket?.accept()
                 inputStream = socket?.getInputStream()
                 outputStream = socket?.getOutputStream()
+
+                socketDOS = DataOutputStream(BufferedOutputStream(outputStream))
+                socketDIS = DataInputStream(BufferedInputStream(inputStream))
+
                 Log.d("SERVER-START", socket?.remoteSocketAddress.toString())
-                sendPhoneInfo(thisPhone)
+                //sendPhoneInfo(thisPhone)
             }
             catch (e: IOException) {
                 Log.d("SERVER-INIT", e.toString())
@@ -42,37 +57,17 @@ class MessageServer (
             while(socket!=null && !socket!!.isClosed){
                 try{
 
-                    val buffer: ByteArray = ByteArray(1024)
-                    val bytes = inputStream?.read(buffer)
+                    val type = socketDIS?.readUTF()
 
-                    // Process the received message
-                    if (bytes != null && bytes > 0) {
-                        val message = String(buffer, 0,bytes)
-                        messageReceivedCallback(message)
-                        Log.d("SOCKET-CLOSED", socket?.isClosed.toString())
+                    if(type?.compareTo("Info") == 0) {
+                        Log.d("CLIENT-RECEIVE","Receiving info")
+                        val message = socketDIS?.readUTF()
+                        messageReceivedCallback(message!!)
                     }
-//                    if (bytes != null && bytes > 0) {
-//                        val receivedData = processData(buffer, bytes)
-//                        receivedData?.let {
-//                            when (it) {
-//                                is String -> {
-//                                    // Received a string message
-//                                    messageReceivedCallback(it)
-//                                    Log.d("SERVER-RECEIVE-MSG", it)
-//                                }
-//                                is ByteArray -> {
-//                                    // Received an image
-//                                    // Handle the ByteArray accordingly
-//                                    // You might want to save it to a file or display it
-//                                    Log.d("SERVER-RECEIVE-IMG", "received")
-//                                }
-//                                else -> {
-//                                    // Handle unknown data type
-//                                    Log.d("SERVER-RECEIVE", "Unknown data type")
-//                                }
-//                            }
-//                        }
-//                    }
+                    else if (type?.compareTo("Image") == 0){
+                        Log.d("CLIENT-RECEIVE","Receiving image")
+                        receiveImage()
+                    }
 
                 } catch (e: IOException) {
                     Log.d("SERVER-RECEIVE", e.toString())
@@ -100,8 +95,13 @@ class MessageServer (
         Log.d("SERVER-SEND", "Sending...")
 
         try{
+            socketDOS!!.writeUTF("Info")
+
             var phoneInfo = "PhoneInfo:" + phone.height + "," + phone.width + "," + phone.DPI + "," + phone.phoneName + "," + phone.id
-            outputStream?.write(phoneInfo.toByteArray())
+            //outputStream?.write(phoneInfo.toByteArray())
+            socketDOS!!.writeUTF(phoneInfo)
+
+            socketDOS!!.flush()
 
             Log.d("SERVER-SEND-INFO", phoneInfo)
         }
@@ -115,9 +115,14 @@ class MessageServer (
         Log.d("SERVER-SEND", "Sending...")
 
         try{
+            socketDOS!!.writeUTF("Info")
+
             var phoneInfo = "PhoneInfo:" + phone.locationX + "," + phone.locationY + "," + phone.nr
-            outputStream?.write(phoneInfo.toByteArray())
-            outputStream?.flush()
+            //outputStream?.write(phoneInfo.toByteArray())
+            //outputStream?.flush()
+            socketDOS!!.writeUTF(phoneInfo)
+
+            socketDOS!!.flush()
 
             Log.d("SERVER-SEND-INFO", phoneInfo)
         }
@@ -131,9 +136,15 @@ class MessageServer (
         Log.d("SERVER-SEND", "Sending...")
 
         try{
+            socketDOS!!.writeUTF("Info")
+
             var phoneInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth
-            outputStream?.write(phoneInfo.toByteArray())
-            outputStream?.flush()
+            //outputStream?.write(phoneInfo.toByteArray())
+            //outputStream?.flush()
+
+            socketDOS!!.writeUTF(phoneInfo)
+
+            socketDOS!!.flush()
 
             Log.d("SERVER-SEND-INFO", phoneInfo)
         }
@@ -143,53 +154,57 @@ class MessageServer (
         Log.d("SERVER-SOCKET-CLOSED", socket?.isClosed.toString())
     }
 
-    fun sendImage(){
+    fun sendImage(file: File){
 
+        if(socketDOS != null) {
+            socketDOS!!.writeUTF("Image")
+
+            socketDOS!!.writeUTF(file.name)
+
+            socketDOS!!.writeLong(file.length())
+
+            Log.d("SERVER-SEND-IMAGE", file.name)
+
+            val fileIS = FileInputStream(file)
+            val bufferArray = ByteArray(5_000_000)
+            var lengthRead: Int
+
+            while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
+                socketDOS!!.write(bufferArray, 0, lengthRead)
+            }
+            fileIS.close()
+        }
     }
 
-//    fun sendImage(contentUri: Uri) {
-//        try {
-////            val imageFile = File(imagePath)
-////            val imageBytes = imageFile.readBytes()
-//            val buf = ByteArray(1024)
-//            var len: Int? = 0
-//
-//
-//
-////            val cr = context.contentResolver
-////            val inputStream: InputStream? = cr.openInputStream(contentUri)
-////            val fileSize = inputStream?.available() ?: 0
-////            val sizeHeader = fileSize.toString().toByteArray()
-////            outputStream?.write("1".toByteArray())
-////            outputStream?.write(sizeHeader)
-////
-////            while (inputStream?.read(buf).also { len = it } != -1) {
-////                len?.let { outputStream?.write(buf, 0, it) }
-////            }
-//
-//
-////            outputStream?.write("1".toByteArray()) // Use 1 to indicate an image
-////            outputStream?.write(imageBytes)
-////            outputStream?.write("Image end".toByteArray())
-//
-//            Log.d("SERVER-SEND-IMG", "Image sent")
-//        } catch (e: IOException) {
-//            Log.d("SERVER-SEND-ERROR", e.toString())
-//        }
-//    }
-//
-//    private fun processData(buffer: ByteArray, length: Int): Any? {
-//        Log.d("DATA-PROCESSING", "Processing")
-//        return if (buffer.isNotEmpty()) {
-//            when (buffer[0]) {
-//                '0'.toByte() -> String(buffer, 1, length - 1) // String data
-//                '1'.toByte() -> buffer.copyOfRange(1, length) // Image data
-//                else -> null // Unknown type
-//            }
-//        } else {
-//            null
-//        }
-//    }
+    fun receiveImage(){
+
+        val fileName = socketDIS?.readUTF()
+
+        var fileLength = socketDIS?.readLong()
+
+        val fileToSave = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath, fileName)
+        val fileOutputStream = FileOutputStream(fileToSave)
+        val bufferArray = ByteArray(5_000_000)
+
+        Log.d("CLIENT-SAVE-IMAGE", fileToSave.path)
+
+        if(fileLength != null) {
+            while (fileLength > 0) {
+                val bytesRead =
+                    socketDIS?.read(bufferArray, 0,
+                        Integer.min(fileLength.toInt(), bufferArray.size)
+                    )
+                if (bytesRead == -1) break
+                fileOutputStream.write(bufferArray, 0, bytesRead!!)
+                fileLength -= bytesRead!!
+            }
+        }
+
+        fileOutputStream.flush()
+        fileOutputStream.close()
+        Log.d("CLIENT-RECEIVE","Image saved")
+    }
+
 
     fun close() {
         try {
