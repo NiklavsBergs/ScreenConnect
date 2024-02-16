@@ -59,6 +59,13 @@ class Connection(val context: Context, val activity: MainActivity, val sharedVie
                 sharedViewModel.host = info.groupOwnerAddress.hostAddress
                 sharedViewModel.startServer()
 
+                if(sharedViewModel.isGroupOwner){
+                    sharedViewModel.infoText = "Host"
+                }
+                else{
+                    sharedViewModel.infoText = "Connected"
+                }
+
                 Log.d("REQUEST", info.groupOwnerAddress.hostAddress)
 
             } else {

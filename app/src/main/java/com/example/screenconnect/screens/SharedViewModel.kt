@@ -25,6 +25,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.math.round
 
 class SharedViewModel() : ViewModel() {
 
@@ -36,7 +37,8 @@ class SharedViewModel() : ViewModel() {
 
     var peerList by mutableStateOf<WifiP2pDeviceList?>(null)
 
-    var isWifiP2pEnabled by mutableStateOf(false)
+    var isWifiEnabled by mutableStateOf(false)
+    var isLocationEnabled by mutableStateOf(false)
     var isDiscovering by mutableStateOf(false)
     var isGroupOwner by mutableStateOf(false)
     var isConnected by mutableStateOf(false)
@@ -206,9 +208,11 @@ class SharedViewModel() : ViewModel() {
         else if(type.equals("ScreenInfo")){
             var vHeight = info.split(",")[0]
             var vWidth = info.split(",")[1]
+            var DPI = info.split(",")[2]
 
             virtualScreen.vHeight = vHeight.toInt()
             virtualScreen.vWidth = vWidth.toInt()
+            virtualScreen.DPI = DPI.toInt()
 
             virtualHeight = vHeight.toInt()
             virtualWidth = vWidth.toInt()
@@ -235,10 +239,23 @@ class SharedViewModel() : ViewModel() {
         val options = BitmapFactory.Options()
         options.inPreferredConfig = Bitmap.Config.ARGB_8888 // Set bitmap config
 
-        val bitmap = BitmapFactory.decodeFile(file.path, options).scale(2160, 2192)
+        Log.d("DPI virtual", virtualScreen.DPI.toString())
+        Log.d("DPI phone", thisPhone.DPI.toString())
+
+        val ratio = thisPhone.DPI.toDouble()/virtualScreen.DPI.toDouble()
+
+        Log.d("RATIO", ratio.toString())
+
+        val scaledWidth = round(2160*ratio*1.0).toInt()
+        val scaledHeight = round(2192*ratio*1.0).toInt()
+
+        val bitmap = upscaleAndCropBitmap(file)//BitmapFactory.decodeFile(file.path, options).scale(scaledWidth, scaledHeight)
 
         Log.d("Bitmap height", bitmap.height.toString())
         Log.d("Bitmap width", bitmap.width.toString())
+
+        Log.d("Phone height", thisPhone.height.toString())
+        Log.d("Phone width", thisPhone.width.toString())
 
         if (bitmap != null) {
             // Crop the Bitmap
@@ -254,6 +271,34 @@ class SharedViewModel() : ViewModel() {
         } else {
             // Failed to decode file into Bitmap
         }
+    }
+
+    fun upscaleAndCropBitmap(file: File): Bitmap {
+
+        var bitmap = BitmapFactory.decodeFile(file.path)
+
+        val ratio = thisPhone.DPI.toDouble()/virtualScreen.DPI.toDouble()
+
+        val widthRatio = virtualScreen.vWidth.toFloat() / bitmap.width
+        val heightRatio = virtualScreen.vHeight.toFloat() / bitmap.height
+        val scaleFactor = if (widthRatio > heightRatio) widthRatio else heightRatio
+
+        val scaledWidth = (bitmap.width * scaleFactor * ratio).toInt()
+        val scaledHeight = (bitmap.height * scaleFactor * ratio).toInt()
+
+        bitmap = bitmap.scale(scaledWidth, scaledHeight)
+
+        Log.d("height",  bitmap.height.toString())
+        Log.d("width", bitmap.width.toString())
+
+        val widthDiff = (bitmap.width - virtualScreen.vWidth) / 2
+        val heightDiff = (bitmap.height - virtualScreen.vHeight) / 2
+
+        Log.d("height",  widthDiff.toString())
+        Log.d("width", heightDiff.toString())
+
+        // Crop the bitmap
+        return Bitmap.createBitmap(bitmap, widthDiff, heightDiff, virtualScreen.vWidth, virtualScreen.vHeight)
     }
 
 }

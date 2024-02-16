@@ -139,7 +139,7 @@ class MessageServer (
         try{
             socketDOS!!.writeUTF("Info")
 
-            var phoneInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth
+            var phoneInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth + "," + screen.DPI
             //outputStream?.write(phoneInfo.toByteArray())
             //outputStream?.flush()
 

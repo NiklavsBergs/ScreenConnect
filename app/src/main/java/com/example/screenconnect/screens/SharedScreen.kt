@@ -18,8 +18,6 @@ import com.example.screenconnect.screens.SharedViewModel
 @Composable
 fun SharedScreen(navController: NavController, sharedViewModel: SharedViewModel) {
 
-    // Check if the bitmap is not null before displaying
-
     Image(sharedViewModel.sharedImage.asImageBitmap(), contentDescription = "Bitmap Image")
 
 }

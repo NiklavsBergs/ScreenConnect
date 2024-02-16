@@ -20,7 +20,10 @@ class VirtualScreen {
                 Log.d("DPI", phone.DPI.toString())
             }
             else{
-                phone.scale = DPI / phone.DPI
+                //phone.scale = DPI / phone.DPI
+                if(DPI>phone.DPI){
+                    DPI = phone.DPI
+                }
             }
 
             phone.locationX = vWidth

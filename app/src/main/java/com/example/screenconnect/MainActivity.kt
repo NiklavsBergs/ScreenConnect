@@ -50,6 +50,7 @@ import androidx.core.app.ActivityCompat
 import com.example.screenconnect.models.PhoneScreen
 import com.example.screenconnect.models.VirtualScreen
 import com.example.screenconnect.network.Connection
+import com.example.screenconnect.network.LocationBroadcastReceiver
 import com.example.screenconnect.network.MessageClient
 import com.example.screenconnect.network.MessageServer
 import com.example.screenconnect.network.WiFiDirectBroadcastReceiver
@@ -86,17 +87,20 @@ class MainActivity : ComponentActivity() {
         )
 
         val wifi = getSystemService(WIFI_SERVICE) as WifiManager
-        if(!wifi.isWifiEnabled()) {
-            Log.d("WIFI Popup in", (!sharedViewModel.isWifiP2pEnabled).toString())
+        sharedViewModel.isWifiEnabled = wifi.isWifiEnabled
+        if(!sharedViewModel.isWifiEnabled) {
+            Log.d("WIFI Popup in", (!sharedViewModel.isWifiEnabled).toString())
             wifiPopup(this)
         }
         else{
-            sharedViewModel.infoText = "Wifi Enabled"
+            sharedViewModel.infoText = "Not connected"
         }
 
-        if (!isLocationEnabled(this)) {
+        sharedViewModel.isLocationEnabled = isLocationEnabled(this)
+        if (!sharedViewModel.isLocationEnabled ) {
             Log.d("Location Popup", "Location services are disabled")
             locationPopup(this)
+            sharedViewModel.isLocationEnabled = isLocationEnabled(this)
         }
 
         sharedViewModel.thisPhone = getPhoneInfo(this)
@@ -104,6 +108,10 @@ class MainActivity : ComponentActivity() {
         sharedViewModel.virtualScreen.addPhone(sharedViewModel.thisPhone)
 
         connection.requestConnectionInfo()
+
+        val br: BroadcastReceiver = LocationBroadcastReceiver(sharedViewModel)
+        val filter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
+        registerReceiver(br, filter)
 
         setContent {
             ScreenConnectTheme {

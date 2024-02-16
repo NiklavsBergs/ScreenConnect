@@ -1,6 +1,7 @@
 package com.example.screenconnect.screens
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -14,12 +15,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.screenconnect.components.statusBar
 import com.example.screenconnect.network.Connection
 import com.example.screenconnect.util.getRealPathFromUri
+import com.example.screenconnect.util.isLocationEnabled
+import com.example.screenconnect.util.locationPopup
 import com.example.screenconnect.util.wifiPopup
 import java.io.File
 
@@ -34,115 +39,128 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (sharedViewModel.isConnected) {
-            sharedViewModel.infoText = "Connected"
+
+        val launcher = rememberLauncherForActivityResult(
+            contract =
+            ActivityResultContracts.GetContent()
+        ) { uri: Uri? ->
+            sharedViewModel.imageUri = uri
+            val imagePath = uri?.let { getRealPathFromUri(it, context) }
+            val imageFile = imagePath?.let { File(it) }
+            sharedViewModel.sendImage(imageFile!!)
+            if(sharedViewModel.isGroupOwner){
+                sharedViewModel.processReceivedImage(File(imagePath))
+            }
         }
 
-        Text(text = sharedViewModel.infoText)
+        statusBar(sharedViewModel.infoText)
+
+        //Text(text = sharedViewModel.infoText)
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Text(text = sharedViewModel.thisPhone.height.toString())
-            Text(text = sharedViewModel.thisPhone.width.toString())
 
-            if (sharedViewModel.isWifiP2pEnabled) {
-                Text(text = "Wi-Fi Direct is enabled")
-            } else {
-                Text(text = "Wi-Fi Direct is not enabled")
-            }
-
-            if (sharedViewModel.isGroupOwner && sharedViewModel.isConnected) {
-                Text(
-                    text = "Host",
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-            } else {
-                Text(
-                    text = if (sharedViewModel.isConnected) "Connected to: ${sharedViewModel.connectedDeviceName}" else "Not connected",
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-            }
+//            if (sharedViewModel.isGroupOwner && sharedViewModel.isConnected) {
+//                Text(
+//                    text = "Host",
+//                    modifier = Modifier.padding(top = 16.dp)
+//                )
+//            } else {
+//                Text(
+//                    text = if (sharedViewModel.isConnected) "Connected to: ${sharedViewModel.connectedDeviceName}" else "Not connected",
+//                    modifier = Modifier.padding(top = 16.dp)
+//                )
+//            }
 
             if (!sharedViewModel.isConnected) {
                 Button(
                     onClick = {
-                        if (!sharedViewModel.isWifiP2pEnabled) {
+                        if (!sharedViewModel.isWifiEnabled) {
                             wifiPopup(context)
-                        } else {
+                        }
+                        if (!sharedViewModel.isLocationEnabled) {
+                            locationPopup(context)
+                            sharedViewModel.isLocationEnabled = isLocationEnabled(context)
+                        }
+
+                        if(sharedViewModel.isWifiEnabled && sharedViewModel.isLocationEnabled){
                             if (!sharedViewModel.isDiscovering) {
                                 sharedViewModel.isDiscovering = true
                                 connection.startPeerDiscovery()
                             }
                         }
+                        else{
+                            Toast.makeText(context, "Please enable WiFi and Location", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     modifier = Modifier.padding(top = 16.dp)
+                        .align(alignment = Alignment.CenterHorizontally)
                 ) {
                     Text(text = "Discover Peers")
                 }
+
+                sharedViewModel.peerList?.let { peers ->
+                    LazyColumn {
+                        itemsIndexed(peers.deviceList.toList()) { index, peer ->
+                            Text(
+                                text = "Device $index: ${peer.deviceName}",
+                                modifier = Modifier.clickable {
+                                    // Handle the click event, initiate connection to the selected peer
+                                    connection.connectToPeer(peer)
+                                })
+                        }
+                    }
+                }
+
             } else {
                 Button(
                     onClick = {
                         connection.disconnect()
                     },
                     modifier = Modifier.padding(top = 16.dp)
+                        .align(alignment = Alignment.CenterHorizontally)
                 ) {
                     Text(text = "Disconnect")
                 }
-            }
 
-
-            sharedViewModel.peerList?.let { peers ->
-                LazyColumn {
-                    itemsIndexed(peers.deviceList.toList()) { index, peer ->
-                        Text(
-                            text = "Device $index: ${peer.deviceName}",
-                            modifier = Modifier.clickable {
-                                // Handle the click event, initiate connection to the selected peer
-                                connection.connectToPeer(peer)
-                            })
-                    }
+                Button(onClick = {
+                    launcher.launch("image/*")
+                },
+                    modifier = Modifier.align(alignment = Alignment.CenterHorizontally)) {
+                    Text(text = "Select image")
                 }
             }
 
-            TextField(
-                value = sharedViewModel.text,
-                onValueChange = {
-                    sharedViewModel.text = it
-                    sharedViewModel.sendText(sharedViewModel.text)
 
-                },
-                label = { Text("Shared text") }
-            )
 
-            Text(
-                text = "VirtualHeight: ${sharedViewModel.virtualHeight}",
-                modifier = Modifier.padding(top = 16.dp)
-            )
-            Text(
-                text = "VirtualWidth: ${sharedViewModel.virtualWidth}",
-                modifier = Modifier.padding(top = 16.dp)
-            )
-            Text(
-                text = "ThisPhone: ${sharedViewModel.phoneNr}",
-                modifier = Modifier.padding(top = 16.dp)
-            )
+//            TextField(
+//                value = sharedViewModel.text,
+//                onValueChange = {
+//                    sharedViewModel.text = it
+//                    sharedViewModel.sendText(sharedViewModel.text)
+//
+//                },
+//                label = { Text("Shared text") }
+//            )
+//
+//            Text(
+//                text = "VirtualHeight: ${sharedViewModel.virtualHeight}",
+//                modifier = Modifier.padding(top = 16.dp)
+//            )
+//            Text(
+//                text = "VirtualWidth: ${sharedViewModel.virtualWidth}",
+//                modifier = Modifier.padding(top = 16.dp)
+//            )
+//            Text(
+//                text = "ThisPhone: ${sharedViewModel.phoneNr}",
+//                modifier = Modifier.padding(top = 16.dp)
+//            )
 
             //Image select and display
-                    val launcher = rememberLauncherForActivityResult(
-                        contract =
-                        ActivityResultContracts.GetContent()
-                    ) { uri: Uri? ->
-                        sharedViewModel.imageUri = uri
-                        val imagePath = uri?.let { getRealPathFromUri(it, context) }
-                        val imageFile = imagePath?.let { File(it) }
-                        sharedViewModel.sendImage(imageFile!!)
-                        if(sharedViewModel.isGroupOwner){
-                            sharedViewModel.processReceivedImage(File(imagePath))
-                        }
-                    }
+
 
 //                    AsyncImage(
 //                        model = sharedViewModel.imageUri,
@@ -155,11 +173,7 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
 //                        contentScale = ContentScale.Crop,
 //                    )
 
-                    Button(onClick = {
-                        launcher.launch("image/*")
-                    }) {
-                        Text(text = "select image")
-                    }
+
 
 //                    Button(onClick = {
 //                        sharedViewModel.sendPhoneInfo()
@@ -167,18 +181,20 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
 //                        Text(text = "send info")
 //                    }
 
-            Button(
-                onClick = {
-
-                },
-                modifier = Modifier.padding(top = 16.dp)
-            ) {
-                Text(text = "Show screen")
-            }
+//            Button(
+//                onClick = {
+//
+//                },
+//                modifier = Modifier.padding(top = 16.dp)
+//            ) {
+//                Text(text = "Show screen")
+//            }
         }
     }
 
 }
+
+
 
 
 
