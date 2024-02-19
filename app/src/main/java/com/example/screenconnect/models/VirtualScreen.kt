@@ -13,6 +13,8 @@ class VirtualScreen {
 
     fun addPhone(phone: PhoneScreen): PhoneScreen {
         if(notAdded(phone)){
+            val GAP = 100
+
             phones.add(phone)
 
             if(phones.size == 1){
@@ -26,10 +28,10 @@ class VirtualScreen {
                 }
             }
 
-            phone.locationX = vWidth
+            phone.locationX = vWidth + GAP
 
             vHeight = Integer.max(vHeight, phone.height)
-            vWidth += phone.width
+            vWidth += phone.width + GAP
 
             phone.nr = phoneCounter
             phoneCounter++
