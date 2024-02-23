@@ -18,12 +18,14 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.scale
 import androidx.lifecycle.ViewModel
 import com.example.screenconnect.models.PhoneScreen
+import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.models.VirtualScreen
 import com.example.screenconnect.network.MessageClient
 import com.example.screenconnect.network.MessageServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import java.io.File
 import kotlin.math.round
 
@@ -64,20 +66,21 @@ class SharedViewModel() : ViewModel() {
     var showImage by mutableStateOf(false)
     var sharedImage by mutableStateOf<Bitmap>(Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888))
 
-    fun sendText(message: String){
-        Log.d("SEND-TEXT", "Call")
+
+    fun sendSwipe(swipe: Swipe){
+        Log.d("SEND-SWIPE", "Called")
         if(!isServerRunning){
             startServer()
         }
         else{
             if (isGroupOwner) {
                 serverScope.launch {
-                    messageServer.send(message)
+                    //messageServer.send(message)
                     Log.d("MESSAGE-SERVER", "Sending...")
                 }
             } else {
                 clientScope.launch {
-                    messageClient.send(message)
+                    messageClient.sendSwipe(swipe)
                     Log.d("MESSAGE-CLIENT", "Sent")
                 }
             }
@@ -190,45 +193,30 @@ class SharedViewModel() : ViewModel() {
     }
 
     private fun parseMessageFromServer(message: String){
-        var type = message.split(":")[0]
-        var info = message.split(":")[1]
+        var type = message.split("*")[0]
+        var info = message.split("*")[1]
 
         if(type.equals("PhoneInfo")){
-            var locationX = info.split(",")[0]
-            var locationY = info.split(",")[1]
-            var nr = info.split(",")[2]
 
-            thisPhone.locationX = locationX.toInt()
-            thisPhone.locationY = locationY.toInt()
-            thisPhone.nr = nr.toInt()
+            thisPhone = Json.decodeFromString<PhoneScreen>(info)
 
-            phoneNr = nr.toInt()
             Log.d("MESSAGE", "Saved PhoneInfo")
         }
         else if(type.equals("ScreenInfo")){
-            var vHeight = info.split(",")[0]
-            var vWidth = info.split(",")[1]
-            var DPI = info.split(",")[2]
 
-            virtualScreen.vHeight = vHeight.toInt()
-            virtualScreen.vWidth = vWidth.toInt()
-            virtualScreen.DPI = DPI.toInt()
+            virtualScreen = Json.decodeFromString<VirtualScreen>(info)
 
-            virtualHeight = vHeight.toInt()
-            virtualWidth = vWidth.toInt()
             Log.d("MESSAGE", "Saved ScreenInfo")
         }
     }
 
     private fun parseMessageFromClient(message: String){
-        var info = message.split(":")[1]
-        var height = info.split(",")[0]
-        var width = info.split(",")[1]
-        var DPI = info.split(",")[2]
-        var name = info.split(",")[3]
-        var id = info.split(",")[4]
 
-        var updatedPhone = virtualScreen.addPhone(PhoneScreen(height.toInt(), width.toInt(), DPI.toInt(), name, id))
+        //var swipe = Json.decodeFromString<Swipe>(message)
+
+        Log.d("SWIPE-RECEIVED", message)
+        var updatedPhone = virtualScreen.addPhone(Json.decodeFromString<PhoneScreen>(message))
+
         messageServer.sendClientInfo(updatedPhone)
         Thread.sleep(100)
         messageServer.sendScreenInfo(virtualScreen)
@@ -242,15 +230,7 @@ class SharedViewModel() : ViewModel() {
         Log.d("DPI virtual", virtualScreen.DPI.toString())
         Log.d("DPI phone", thisPhone.DPI.toString())
 
-        val ratio = thisPhone.DPI.toDouble()/virtualScreen.DPI.toDouble()
-
-        Log.d("RATIO", ratio.toString())
-
-        val scaledWidth = round(2160*ratio*1.0).toInt()
-        val scaledHeight = round(2192*ratio*1.0).toInt()
-
-        val bitmap = upscaleAndCropBitmap(file)//BitmapFactory.decodeFile(file.path, options).scale(scaledWidth, scaledHeight)
-
+        val bitmap = upscaleAndCropBitmap(file)
         Log.d("Bitmap height", bitmap.height.toString())
         Log.d("Bitmap width", bitmap.width.toString())
 
@@ -258,7 +238,7 @@ class SharedViewModel() : ViewModel() {
         Log.d("Phone width", thisPhone.width.toString())
 
         if (bitmap != null) {
-            // Crop the Bitmap
+            // Crop the Bitmap to phone size and location
             val croppedBitmap = Bitmap.createBitmap(
                 bitmap,
                 thisPhone.locationX,

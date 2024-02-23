@@ -1,7 +1,9 @@
 package com.example.screenconnect.models
 
 import android.util.Log
+import kotlinx.serialization.Serializable
 
+@Serializable
 class VirtualScreen {
     var vHeight: Int = 0
     var vWidth: Int = 0

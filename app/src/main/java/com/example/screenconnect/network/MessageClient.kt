@@ -3,7 +3,10 @@ package com.example.screenconnect.network
 import android.os.Environment
 import android.util.Log
 import com.example.screenconnect.models.PhoneScreen
+import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.screens.SharedViewModel
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInput
@@ -99,19 +102,42 @@ class MessageClient (
     fun sendPhoneInfo(phone: PhoneScreen){
         Log.d("CLIENT-SEND", "Sending...")
 
-
         try{
             if(socketDOS != null) {
                 socketDOS!!.writeUTF("Info")
 
-                var phoneInfo =
-                    "PhoneInfo:" + phone.height + "," + phone.width + "," + phone.DPI + "," + phone.phoneName + "," + phone.id
-                //outputStream?.write(phoneInfo.toByteArray())
+                //var phoneInfo = "PhoneInfo:" + phone.height + "," + phone.width + "," + phone.DPI + "," + phone.phoneName + "," + phone.id
+                var phoneInfo = Json.encodeToString(phone)
+
                 socketDOS!!.writeUTF(phoneInfo)
 
                 socketDOS!!.flush()
 
                 Log.d("CLIENT-SEND-INFO", phoneInfo)
+            }
+        }
+        catch (e: IOException){
+            Log.d("CLIENT-SEND-ERROR", e.toString())
+        }
+        Log.d("CLIENT-SEND-SOCKET-CLOSED", socket?.isClosed.toString())
+    }
+
+    fun sendSwipe(swipe: Swipe){
+        Log.d("CLIENT-SEND", "Sending...")
+
+        try{
+            if(socketDOS != null) {
+                socketDOS!!.writeUTF("Info")
+
+                var swipe = Json.encodeToString(swipe)
+
+                Log.d("CLIENT-SEND-SWIPE", swipe)
+
+                socketDOS!!.writeUTF(swipe)
+
+                socketDOS!!.flush()
+
+                Log.d("CLIENT-SEND-SWIPE", swipe)
             }
         }
         catch (e: IOException){

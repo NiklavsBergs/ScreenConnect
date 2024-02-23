@@ -1,10 +1,12 @@
 package com.example.screenconnect.screens
 
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -15,12 +17,18 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.screenconnect.components.statusBar
+import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.network.Connection
 import com.example.screenconnect.util.getRealPathFromUri
 import com.example.screenconnect.util.isLocationEnabled
@@ -37,14 +45,72 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
         navController.navigate(Screen.SharedScreen.route)
         sharedViewModel.showImage = false
     }
+    var dragX = 0.0
+    var dragY = 0.0
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    var startX = 0.0
+    var startY = 0.0
+
+    val initialPosition = remember { mutableStateOf(Offset.Zero) }
+    val endPosition = remember { mutableStateOf(Offset.Zero) }
+    var isDragging = false
+
+    Column(modifier = Modifier.fillMaxSize()
+        .pointerInput(Unit){
+            detectDragGestures( onDragStart = { offset ->
+                initialPosition.value = offset
+                isDragging = true
+            }, onDragEnd = {
+                if(isDragging){
+                    endPosition.value = Offset(initialPosition.value.x + dragX.toFloat(), initialPosition.value.y +  dragY.toFloat())
+                    Log.d("Drag", initialPosition.toString() + ", " + endPosition.toString())
+                    initialPosition.value = Offset.Zero
+                    endPosition.value = Offset.Zero
+
+                    var swipe = Swipe(initialPosition.value, endPosition.value, sharedViewModel.thisPhone)
+
+                    dragX = 0.0
+                    dragY = 0.0
+
+                    isDragging = false
+                }
+
+            }){ change, dragAmount ->
+                change.consume()
+                dragX += dragAmount.x
+                dragY += dragAmount.y
+
+                val newPositionX = initialPosition.value.x + dragX.toFloat()
+                val newPositionY = initialPosition.value.y + dragY.toFloat()
+//                val screenWidth = // Get screen width
+//                val screenHeight = // Get screen height
+
+                if (newPositionX >= 10 && newPositionX <= sharedViewModel.thisPhone.width-10 &&
+                    newPositionY >= 10 && newPositionY <= sharedViewModel.thisPhone.height-10) {
+                    // If position is within bounds, continue drag
+                } else {
+                    // Position is outside bounds, end drag event
+                    endPosition.value = Offset(newPositionX, newPositionY)
+                    dragX = 0.0
+                    dragY = 0.0
+                    isDragging = false
+
+                    var swipe = Swipe(initialPosition.value, endPosition.value, sharedViewModel.thisPhone)
+
+                    sharedViewModel.sendSwipe(swipe)
+
+                    Log.d("Drag", initialPosition.toString() + ", " + endPosition.toString())
+                }
+            }
+
+        }) {
 
         val launcher = rememberLauncherForActivityResult(
             contract =
             ActivityResultContracts.GetContent()
         ) { uri: Uri? ->
             sharedViewModel.imageUri = uri
+            Log.d("Image URI path", uri?.path.toString())
             val imagePath = uri?.let { getRealPathFromUri(it, context) }
             val imageFile = imagePath?.let { File(it) }
             sharedViewModel.sendImage(imageFile!!)

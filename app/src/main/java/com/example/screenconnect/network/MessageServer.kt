@@ -7,6 +7,8 @@ import com.example.screenconnect.models.PhoneScreen
 import com.example.screenconnect.models.VirtualScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInputStream
@@ -118,9 +120,11 @@ class MessageServer (
         try{
             socketDOS!!.writeUTF("Info")
 
-            var phoneInfo = "PhoneInfo:" + phone.locationX + "," + phone.locationY + "," + phone.nr
-            //outputStream?.write(phoneInfo.toByteArray())
-            //outputStream?.flush()
+            //var phoneInfo = "PhoneInfo:" + phone.locationX + "," + phone.locationY + "," + phone.nr
+            var phoneInfo = "PhoneInfo*" + Json.encodeToString(phone)
+
+            //var phoneInfo = Json.encodeToString(phone)
+
             socketDOS!!.writeUTF(phoneInfo)
 
             socketDOS!!.flush()
@@ -139,15 +143,15 @@ class MessageServer (
         try{
             socketDOS!!.writeUTF("Info")
 
-            var phoneInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth + "," + screen.DPI
-            //outputStream?.write(phoneInfo.toByteArray())
-            //outputStream?.flush()
+            //var screenInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth + "," + screen.DPI
+            var screenInfo = "ScreenInfo*" + Json.encodeToString(screen)
+            //var screenInfo = Json.encodeToString(screen)
 
-            socketDOS!!.writeUTF(phoneInfo)
+            socketDOS!!.writeUTF(screenInfo)
 
             socketDOS!!.flush()
 
-            Log.d("SERVER-SEND-INFO", phoneInfo)
+            Log.d("SERVER-SEND-INFO", screenInfo)
         }
         catch (e: IOException){
             Log.d("SERVER-SEND-ERROR", e.toString())

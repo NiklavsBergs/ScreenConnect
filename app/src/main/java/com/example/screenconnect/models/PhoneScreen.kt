@@ -1,5 +1,8 @@
 package com.example.screenconnect.models
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 class PhoneScreen(val height: Int, val width: Int, val DPI: Int, val phoneName: String, val id: String) {
 
     var locationX = 0
