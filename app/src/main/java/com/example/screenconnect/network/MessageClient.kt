@@ -2,14 +2,13 @@ package com.example.screenconnect.network
 
 import android.os.Environment
 import android.util.Log
-import com.example.screenconnect.models.PhoneScreen
+import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.screens.SharedViewModel
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
-import java.io.DataInput
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
@@ -23,7 +22,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 
 class MessageClient (
-    private val thisPhone: PhoneScreen,
+    private val thisPhone: Phone,
     private val host: String,
     private val sharedViewModel: SharedViewModel,
     private val messageReceivedCallback: (String) -> Unit,
@@ -49,7 +48,7 @@ class MessageClient (
 
             Log.d("CLIENT-START",host)
 
-            sendPhoneInfo(thisPhone)
+            //sendPhoneInfo(thisPhone)
 
 
         } catch (e: IOException) {
@@ -99,7 +98,7 @@ class MessageClient (
             Log.d("CLIENT-SEND-SOCKET", socket?.isClosed.toString())
     }
 
-    fun sendPhoneInfo(phone: PhoneScreen){
+    fun sendPhoneInfo(phone: Phone){
         Log.d("CLIENT-SEND", "Sending...")
 
         try{
@@ -136,8 +135,6 @@ class MessageClient (
                 socketDOS!!.writeUTF(swipe)
 
                 socketDOS!!.flush()
-
-                Log.d("CLIENT-SEND-SWIPE", swipe)
             }
         }
         catch (e: IOException){

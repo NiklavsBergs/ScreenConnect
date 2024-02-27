@@ -1,9 +1,8 @@
 package com.example.screenconnect.network
 
-import android.net.Uri
 import android.os.Environment
 import android.util.Log
-import com.example.screenconnect.models.PhoneScreen
+import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.VirtualScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +22,7 @@ import java.net.ServerSocket
 import java.net.Socket
 
 class MessageServer (
-    private val thisPhone: PhoneScreen,
+    private val thisPhone: Phone,
     private val messageReceivedCallback: (String) -> Unit
     ) : Thread(){
 
@@ -94,7 +93,7 @@ class MessageServer (
                 }
     }
 
-    fun sendPhoneInfo(phone: PhoneScreen){
+    fun sendPhoneInfo(phone: Phone){
         Log.d("SERVER-SEND", "Sending...")
 
         try{
@@ -114,7 +113,7 @@ class MessageServer (
         Log.d("SERVER-SEND-SOCKET-CLOSED", socket?.isClosed.toString())
     }
 
-    fun sendClientInfo(phone: PhoneScreen){
+    fun sendClientInfo(phone: Phone){
         Log.d("SERVER-SEND", "Sending...")
 
         try{

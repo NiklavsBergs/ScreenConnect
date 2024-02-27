@@ -63,11 +63,11 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
             }, onDragEnd = {
                 if(isDragging){
                     endPosition.value = Offset(initialPosition.value.x + dragX.toFloat(), initialPosition.value.y +  dragY.toFloat())
-                    Log.d("Drag", initialPosition.toString() + ", " + endPosition.toString())
-                    initialPosition.value = Offset.Zero
-                    endPosition.value = Offset.Zero
+                    Log.d("DRAG", "End")
 
                     var swipe = Swipe(initialPosition.value, endPosition.value, sharedViewModel.thisPhone)
+                    sharedViewModel.sendSwipe(swipe)
+                    Log.d("SWIPE-END", endPosition.value.toString())
 
                     dragX = 0.0
                     dragY = 0.0
@@ -82,24 +82,25 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
 
                 val newPositionX = initialPosition.value.x + dragX.toFloat()
                 val newPositionY = initialPosition.value.y + dragY.toFloat()
-//                val screenWidth = // Get screen width
-//                val screenHeight = // Get screen height
 
-                if (newPositionX >= 10 && newPositionX <= sharedViewModel.thisPhone.width-10 &&
-                    newPositionY >= 10 && newPositionY <= sharedViewModel.thisPhone.height-10) {
-                    // If position is within bounds, continue drag
-                } else {
-                    // Position is outside bounds, end drag event
-                    endPosition.value = Offset(newPositionX, newPositionY)
-                    dragX = 0.0
-                    dragY = 0.0
-                    isDragging = false
+                if(isDragging){
 
-                    var swipe = Swipe(initialPosition.value, endPosition.value, sharedViewModel.thisPhone)
+                    if (newPositionX >= 10 && newPositionX <= sharedViewModel.thisPhone.width-10 &&
+                        newPositionY >= 10 && newPositionY <= sharedViewModel.thisPhone.height-10) {
+                        // If position is within bounds, continue drag
+                    } else {
+                        // Position is outside bounds, end drag event
+                        endPosition.value = Offset(newPositionX, newPositionY)
+                        dragX = 0.0
+                        dragY = 0.0
 
-                    sharedViewModel.sendSwipe(swipe)
-
-                    Log.d("Drag", initialPosition.toString() + ", " + endPosition.toString())
+                        var swipe = Swipe(initialPosition.value, endPosition.value, sharedViewModel.thisPhone)
+                        Log.d("DRAG", "Out of bounds")
+                        Log.d("SWIPE-END", endPosition.value.toString())
+                        //Log.d("Drag", initialPosition.value.toString() + ", " + endPosition.value.toString())
+                        sharedViewModel.sendSwipe(swipe)
+                        isDragging = false
+                    }
                 }
             }
 

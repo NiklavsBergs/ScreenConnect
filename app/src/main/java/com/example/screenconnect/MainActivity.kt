@@ -24,8 +24,6 @@ import com.example.screenconnect.util.wifiPopup
 
 class MainActivity : ComponentActivity() {
 
-    //var text by mutableStateOf("Hello")
-
     lateinit var connection: Connection
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -61,7 +59,10 @@ class MainActivity : ComponentActivity() {
 
         sharedViewModel.thisPhone = getPhoneInfo(this)
 
-        sharedViewModel.virtualScreen.addPhone(sharedViewModel.thisPhone)
+        Log.d("PHONE X", sharedViewModel.thisPhone.locationX.toString())
+        Log.d("PHONE Y", sharedViewModel.thisPhone.locationY.toString())
+
+        //sharedViewModel.virtualScreen.addPhone(sharedViewModel.thisPhone)
 
         connection.requestConnectionInfo()
 

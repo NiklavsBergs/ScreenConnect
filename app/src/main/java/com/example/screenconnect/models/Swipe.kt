@@ -1,60 +1,86 @@
 //@file:UseSerializers(OffsetSerializer::class)
 package com.example.screenconnect.models
 
+import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import com.example.screenconnect.enums.Edge
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Serializer
-import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
+import kotlin.math.abs
 
 @Serializable
-class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Serializable(with = OffsetSerializer::class) val end: Offset, val phone: PhoneScreen) {
+class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Serializable(with = OffsetSerializer::class) val end: Offset, val phone: Phone) {
 
     @Serializable(with = OffsetSerializer::class)
     var connectionPoint = Offset.Zero
 
-    var edge = Edge.LEFT
+    var edge = Edge.NONE
+
 
     init {
-        connectionPoint = calculateEdgeIntersection()
+        if(connectionPoint == Offset.Zero){
+            connectionPoint = calculateEdgeIntersection()
+            Log.d("SWIPE", Json.encodeToString(this))
+        }
     }
 
-    fun calculateEdgeIntersection(): Offset{
-        val slope = (end.y - start.y) / (end.x - start.x)
+    fun calculateEdgeIntersection(): Offset {
+        // Calculate the slope of the line
+        var slope = (end.y - start.y) / (end.x - start.x)
 
-        edge = if (start.x < end.x) {
-            // Moving from left to right
-            if (start.y < end.y) {
-                // Moving from top-left to bottom-right
-                if (slope > 0) Edge.RIGHT else Edge.BOTTOM
-            } else {
-                // Moving from bottom-left to top-right
-                if (slope < 0) Edge.RIGHT else Edge.TOP
-            }
-        } else {
-            // Moving from right to left
-            if (start.y < end.y) {
-                // Moving from top-right to bottom-left
-                if (slope < 0) Edge.LEFT else Edge.BOTTOM
-            } else {
-                // Moving from bottom-right to top-left
-                if (slope > 0) Edge.LEFT else Edge.TOP
+        if(slope == Float.POSITIVE_INFINITY || slope == Float.NEGATIVE_INFINITY){
+            slope = 100F
+        }
+
+        val intersections = mutableListOf<Offset>()
+
+        val edges = mutableListOf<Edge>()
+
+        val yIntercept = start.y - slope * start.x
+
+        Log.d("SLOPE", slope.toString())
+
+        val xLessThanStart = start.x > end.x
+
+        val yLessThanStart = start.y > end.y
+
+        if(abs(slope)<100){
+            //LEFT
+            intersections.add(Offset(0F, yIntercept))
+            //RIGHT
+            intersections.add(Offset(phone.width.toFloat(), phone.width*slope + yIntercept))
+
+            edges.add(Edge.LEFT)
+            edges.add(Edge.RIGHT)
+        }
+        if(abs(slope)>0.01){
+            //TOP
+            intersections.add(Offset(abs(yIntercept)/slope, 0F))
+            //BOTTOM
+            intersections.add(Offset((phone.height-yIntercept)/slope, phone.height.toFloat()))
+
+            edges.add(Edge.TOP)
+            edges.add(Edge.BOTTOM)
+        }
+
+        for(i in 0 until intersections.size){
+            if(intersections[i].x in 0.0..phone.width.toDouble() && intersections[i].y in 0.0 ..phone.height.toDouble()){
+                if((intersections[i].x < start.x) == xLessThanStart && (intersections[i].y < start.y) == yLessThanStart){
+                    Log.d("INT-ACTUAL", i.toString())
+                    edge = edges[i]
+                    return intersections[i]
+                }
             }
         }
 
-        return when (edge) {
-            Edge.LEFT -> Offset(0f, start.y + slope * (-start.x))
-            Edge.RIGHT -> Offset(phone.width.toFloat(), start.y + slope * (phone.width - start.x))
-            Edge.TOP -> Offset(start.x + (1 / slope) * (-start.y), 0f)
-            Edge.BOTTOM -> Offset(start.x + (1 / slope) * (phone.height - start.y), phone.height.toFloat())
-        }
+        return Offset(0F, 0F)
     }
 }
 

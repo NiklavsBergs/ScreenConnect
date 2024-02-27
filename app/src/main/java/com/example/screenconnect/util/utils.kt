@@ -8,15 +8,13 @@ import android.hardware.display.DisplayManager
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
-import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.view.Display
-import com.example.screenconnect.models.PhoneScreen
 import kotlin.system.exitProcess
 
-fun getPhoneInfo(context: Context): PhoneScreen{
+fun getPhoneInfo(context: Context): com.example.screenconnect.models.Phone {
     val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
     val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
 
@@ -31,18 +29,8 @@ fun getPhoneInfo(context: Context): PhoneScreen{
 
     val id = name + (0..100).random()
 
-    return PhoneScreen(height, width, DPI, name, id)
+    return com.example.screenconnect.models.Phone(height, width, DPI, name, id)
 }
-
-//private fun getRealPathFromUri(uri: Uri): String? {
-//    val projection = arrayOf(MediaStore.Images.Media.DATA)
-//    val cursor = contentResolver.query(uri, projection, null, null, null)
-//    val columnIndex = cursor?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-//    cursor?.moveToFirst()
-//    val path = columnIndex?.let { cursor.getString(it) }
-//    cursor?.close()
-//    return path
-//}
 
 fun wifiPopup(context: Context){
     val builder = AlertDialog.Builder(

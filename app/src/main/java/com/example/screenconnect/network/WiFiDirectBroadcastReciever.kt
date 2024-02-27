@@ -52,6 +52,7 @@ class WiFiDirectBroadcastReceiver(private val manager: WifiP2pManager?, private 
                     connection.requestConnectionInfo()
                     if(sharedViewModel.isGroupOwner){
                         sharedViewModel.infoText = "Host"
+                        sharedViewModel.thisPhone.isHost = true
                         Log.d("WIFI_DIRECT", "Host")
                     }
                     else{

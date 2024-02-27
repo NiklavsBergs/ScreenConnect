@@ -2,20 +2,75 @@ package com.example.screenconnect.models
 
 import android.util.Log
 import kotlinx.serialization.Serializable
+import java.lang.Integer.max
 
 @Serializable
 class VirtualScreen {
     var vHeight: Int = 0
     var vWidth: Int = 0
-    var phones = mutableListOf<PhoneScreen>()
+    var phones = mutableListOf<Phone>()
 
     var DPI: Int = 0
 
     var phoneCounter = 1
 
-    fun addPhone(phone: PhoneScreen): PhoneScreen {
+    var swipes = mutableListOf<Swipe>()
+
+    val GAP = 100
+
+    fun addSwipe(swipe: Swipe): Phone?{
+
+        if(swipes.size == 0){
+            swipes.add(swipe)
+        }
+        else{
+            var phoneA = swipes[0].phone
+            var phoneB = swipe.phone
+
+            var aboveA = swipes[0].connectionPoint.y.toInt()
+            var aboveB = swipe.connectionPoint.y.toInt()
+            if(aboveA>aboveB){
+                phoneA.locationY = 0
+                phoneB.locationY = aboveA - aboveB
+            }
+            else{
+                phoneA.locationY = aboveB - aboveA
+                phoneB.locationY = 0
+            }
+
+            phoneB.locationX = phoneA.width + GAP
+
+
+            var above = max(swipes[0].connectionPoint.y.toInt(), swipe.connectionPoint.y.toInt())
+            var below = max(swipes[0].phone.height - swipes[0].connectionPoint.y.toInt(), swipe.phone.height - swipe.connectionPoint.y.toInt())
+
+            vHeight = above + below
+
+            vWidth = swipes[0].phone.width + GAP + swipe.phone.width
+
+            swipes.clear()
+
+            addPhoneNew(phoneA)
+            addPhoneNew(phoneB)
+
+            if(phoneA.isHost){
+                return phoneA
+            }
+
+            if(phoneB.isHost){
+                return phoneB
+            }
+
+            return null
+        }
+
+
+
+        return null
+    }
+
+    fun addPhone(phone: Phone): Phone {
         if(notAdded(phone)){
-            val GAP = 100
 
             phones.add(phone)
 
@@ -53,7 +108,24 @@ class VirtualScreen {
 
     }
 
-    fun notAdded(phone: PhoneScreen):Boolean{
+    fun addPhoneNew(phone: Phone) {
+        if (notAdded(phone)) {
+            phones.add(phone)
+        }
+        else{
+            var phoneAdded = findPhone(phone)
+            phoneAdded.locationX = phone.locationX
+            phoneAdded.locationY = phone.locationY
+        }
+        if(DPI == 0){
+            DPI = phone.DPI
+        }
+        else if(DPI>phone.DPI){
+            DPI = phone.DPI
+        }
+    }
+
+    fun notAdded(phone: Phone):Boolean{
         var notIn:Boolean = true
 
         for (p in phones){
@@ -65,8 +137,8 @@ class VirtualScreen {
         return notIn
     }
 
-    fun findPhone(phone: PhoneScreen): PhoneScreen {
-        lateinit var foundPhone : PhoneScreen
+    fun findPhone(phone: Phone): Phone {
+        lateinit var foundPhone : Phone
         for (p in phones){
             if (phone.id.equals(p.id)){
                 foundPhone  = p
@@ -74,5 +146,13 @@ class VirtualScreen {
         }
 
         return foundPhone
+    }
+
+    fun removePhone(phone: Phone){
+        for (p in phones){
+            if (phone.id.equals(p.id)){
+                phones.remove(p)
+            }
+        }
     }
 }
