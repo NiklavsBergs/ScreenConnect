@@ -66,7 +66,7 @@ class Connection(val context: Context, val activity: MainActivity, val sharedVie
                     sharedViewModel.infoText = "Connected"
                 }
 
-                Log.d("REQUEST", info.groupOwnerAddress.hostAddress)
+                Log.d("HOST-ADDRESS", info.groupOwnerAddress.hostAddress)
 
             } else {
                 sharedViewModel.isConnected = false

@@ -11,6 +11,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.Display
 import kotlin.system.exitProcess
 
@@ -23,7 +24,12 @@ fun getPhoneInfo(context: Context): com.example.screenconnect.models.Phone {
 
     val height = displayMetrics.heightPixels
     val width = displayMetrics.widthPixels
-    val DPI = displayMetrics.densityDpi
+    val xDPI = displayMetrics.xdpi.toInt()
+    val yDPI = displayMetrics.ydpi.toInt()
+//    val DPI = displayMetrics.densityDpi
+    val DPI = (xDPI+yDPI)/2
+
+    Log.d("DPI", DPI.toString())
 
     val name = Build.MANUFACTURER + " " + Build.MODEL;
 

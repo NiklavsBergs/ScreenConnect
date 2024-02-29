@@ -1,6 +1,7 @@
 package com.example.screenconnect.models
 
 import android.util.Log
+import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
 import java.lang.Integer.max
 
@@ -16,7 +17,7 @@ class VirtualScreen {
 
     var swipes = mutableListOf<Swipe>()
 
-    val GAP = 100
+    val GAP = 67
 
     fun addSwipe(swipe: Swipe): Phone?{
 
@@ -50,8 +51,8 @@ class VirtualScreen {
 
             swipes.clear()
 
-            addPhoneNew(phoneA)
-            addPhoneNew(phoneB)
+            addPhone(phoneA)
+            addPhone(phoneB)
 
             if(phoneA.isHost){
                 return phoneA
@@ -69,46 +70,46 @@ class VirtualScreen {
         return null
     }
 
-    fun addPhone(phone: Phone): Phone {
-        if(notAdded(phone)){
+//    fun addPhone(phone: Phone): Phone {
+//        if(notAdded(phone)){
+//
+//            phones.add(phone)
+//
+//            if(phones.size == 1){
+//                DPI = phone.DPI
+//                Log.d("DPI", phone.DPI.toString())
+//            }
+//            else{
+//                //phone.scale = DPI / phone.DPI
+//                if(DPI>phone.DPI){
+//                    DPI = phone.DPI
+//                }
+//            }
+//
+//            phone.locationX = vWidth + GAP
+//
+//            vHeight = Integer.max(vHeight, phone.height)
+//            vWidth += phone.width + GAP
+//
+//            phone.nr = phoneCounter
+//            phoneCounter++
+//            Log.d("V-SCREEN", "Phone added")
+//            Log.d("V-SCREEN", "$vHeight, $vWidth")
+//            return phone
+//        }
+//        else{
+//            var existingPhone = findPhone(phone)
+//
+//            //change necesarry values
+//            Log.d("V-SCREEN", "Phone already added to screen")
+//
+//            return existingPhone
+//        }
+//
+//
+//    }
 
-            phones.add(phone)
-
-            if(phones.size == 1){
-                DPI = phone.DPI
-                Log.d("DPI", phone.DPI.toString())
-            }
-            else{
-                //phone.scale = DPI / phone.DPI
-                if(DPI>phone.DPI){
-                    DPI = phone.DPI
-                }
-            }
-
-            phone.locationX = vWidth + GAP
-
-            vHeight = Integer.max(vHeight, phone.height)
-            vWidth += phone.width + GAP
-
-            phone.nr = phoneCounter
-            phoneCounter++
-            Log.d("V-SCREEN", "Phone added")
-            Log.d("V-SCREEN", "$vHeight, $vWidth")
-            return phone
-        }
-        else{
-            var existingPhone = findPhone(phone)
-
-            //change necesarry values
-            Log.d("V-SCREEN", "Phone already added to screen")
-
-            return existingPhone
-        }
-
-
-    }
-
-    fun addPhoneNew(phone: Phone) {
+    fun addPhone(phone: Phone) {
         if (notAdded(phone)) {
             phones.add(phone)
         }
@@ -148,11 +149,9 @@ class VirtualScreen {
         return foundPhone
     }
 
-    fun removePhone(phone: Phone){
-        for (p in phones){
-            if (phone.id.equals(p.id)){
-                phones.remove(p)
-            }
-        }
+    fun phonePosToScreenPos(connectionPoint: Offset): Offset{
+
+        return Offset(0F, 0F)
     }
+
 }

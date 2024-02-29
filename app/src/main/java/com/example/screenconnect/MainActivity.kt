@@ -43,11 +43,8 @@ class MainActivity : ComponentActivity() {
         val wifi = getSystemService(WIFI_SERVICE) as WifiManager
         sharedViewModel.isWifiEnabled = wifi.isWifiEnabled
         if(!sharedViewModel.isWifiEnabled) {
-            Log.d("WIFI Popup in", (!sharedViewModel.isWifiEnabled).toString())
+            Log.d("WIFI Popup", (!sharedViewModel.isWifiEnabled).toString())
             wifiPopup(this)
-        }
-        else{
-            sharedViewModel.infoText = "Not connected"
         }
 
         sharedViewModel.isLocationEnabled = isLocationEnabled(this)
@@ -75,28 +72,7 @@ class MainActivity : ComponentActivity() {
 
                 Navigation(sharedViewModel, connection)
 
-//                if(!sharedViewModel.showImage){
-//                    settingsScreen(sharedViewModel, connection)
-//                }
-//                else{
-//                    sharedScreen(sharedViewModel)
-//                }
-
             }
-        }
-
-        if(connection.manager != null){
-            Log.d("MANAGER", "Good")
-        }
-        else{
-            Log.d("MANAGER", "null")
-        }
-
-        if(connection.channel != null){
-            Log.d("CHANNEL", "Good")
-        }
-        else{
-            Log.d("CHANNEL", "null")
         }
 
     }

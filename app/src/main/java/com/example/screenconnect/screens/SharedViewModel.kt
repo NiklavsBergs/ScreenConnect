@@ -26,7 +26,7 @@ import java.io.File
 class SharedViewModel() : ViewModel() {
 
     var text by mutableStateOf("Hello")
-    var infoText by mutableStateOf("Info");
+    var infoText by mutableStateOf("Not connected");
     var imageUri by mutableStateOf<Uri?>(null)
 
     var host by mutableStateOf("")
