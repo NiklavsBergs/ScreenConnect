@@ -14,24 +14,24 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Serializable
 class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Serializable(with = OffsetSerializer::class) val end: Offset, val phone: Phone) {
 
-    @Serializable(with = OffsetSerializer::class)
-    var connectionPoint = Offset.Zero
+    var connectionPoint : Position = Position(-1, -1)
 
     var edge = Edge.NONE
 
 
     init {
-        if(connectionPoint == Offset.Zero){
+        if(connectionPoint.x == -1){
             connectionPoint = calculateEdgeIntersection()
             Log.d("SWIPE", Json.encodeToString(this))
         }
     }
 
-    fun calculateEdgeIntersection(): Offset {
+    fun calculateEdgeIntersection(): Position {
         // Calculate the slope of the line
         var slope = (end.y - start.y) / (end.x - start.x)
 
@@ -39,7 +39,7 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
             slope = 100F
         }
 
-        val intersections = mutableListOf<Offset>()
+        val intersections = mutableListOf<Position>()
 
         val edges = mutableListOf<Edge>()
 
@@ -53,25 +53,25 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
 
         if(abs(slope)<100){
             //LEFT
-            intersections.add(Offset(0F, yIntercept))
+            intersections.add(Position(0, yIntercept.roundToInt()))
             //RIGHT
-            intersections.add(Offset(phone.width.toFloat(), phone.width*slope + yIntercept))
+            intersections.add(Position(phone.width, (phone.width*slope + yIntercept).roundToInt()))
 
             edges.add(Edge.LEFT)
             edges.add(Edge.RIGHT)
         }
         if(abs(slope)>0.01){
             //TOP
-            intersections.add(Offset(abs(yIntercept)/slope, 0F))
+            intersections.add(Position((abs(yIntercept)/slope).roundToInt(), 0))
             //BOTTOM
-            intersections.add(Offset((phone.height-yIntercept)/slope, phone.height.toFloat()))
+            intersections.add(Position(((phone.height-yIntercept)/slope).roundToInt(), phone.height))
 
             edges.add(Edge.TOP)
             edges.add(Edge.BOTTOM)
         }
 
         for(i in 0 until intersections.size){
-            if(intersections[i].x in 0.0..phone.width.toDouble() && intersections[i].y in 0.0 ..phone.height.toDouble()){
+            if(intersections[i].x in 0..phone.width && intersections[i].y in 0 ..phone.height){
                 if((intersections[i].x < start.x) == xLessThanStart && (intersections[i].y < start.y) == yLessThanStart){
                     Log.d("INT-ACTUAL", i.toString())
                     edge = edges[i]
@@ -80,7 +80,7 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
             }
         }
 
-        return Offset(0F, 0F)
+        return Position(0, 0)
     }
 }
 
@@ -96,3 +96,16 @@ object OffsetSerializer : KSerializer<Offset> {
         return Offset(x, y)
     }
 }
+
+//object PositionSerializer : KSerializer<Position> {
+//    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Position", PrimitiveKind.STRING)
+//
+//    override fun serialize(encoder: Encoder, value: Position) {
+//        encoder.encodeString("${value.x},${value.y}")
+//    }
+//
+//    override fun deserialize(decoder: Decoder): Position {
+//        val (x, y) = decoder.decodeString().split(",").map { it.toInt() }
+//        return Position(x, y)
+//    }
+//}

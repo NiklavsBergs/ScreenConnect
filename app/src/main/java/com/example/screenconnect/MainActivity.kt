@@ -56,9 +56,6 @@ class MainActivity : ComponentActivity() {
 
         sharedViewModel.thisPhone = getPhoneInfo(this)
 
-        Log.d("PHONE X", sharedViewModel.thisPhone.locationX.toString())
-        Log.d("PHONE Y", sharedViewModel.thisPhone.locationY.toString())
-
         //sharedViewModel.virtualScreen.addPhone(sharedViewModel.thisPhone)
 
         connection.requestConnectionInfo()

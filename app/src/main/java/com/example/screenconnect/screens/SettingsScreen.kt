@@ -113,10 +113,12 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
             sharedViewModel.imageUri = uri
             Log.d("Image URI path", uri?.path.toString())
             val imagePath = uri?.let { getRealPathFromUri(it, context) }
-            val imageFile = imagePath?.let { File(it) }
-            sharedViewModel.sendImage(imageFile!!)
-            if(sharedViewModel.isGroupOwner){
-                sharedViewModel.processReceivedImage(File(imagePath))
+            if(imagePath != null){
+                val imageFile = imagePath?.let { File(it) }
+                sharedViewModel.sendImage(imageFile!!)
+                if(sharedViewModel.isGroupOwner){
+                    sharedViewModel.processReceivedImage(File(imagePath))
+                }
             }
         }
 

@@ -2,7 +2,7 @@ package com.example.screenconnect.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Rect
+import android.graphics.Matrix
 import android.net.Uri
 import android.net.wifi.p2p.WifiP2pDeviceList
 import android.os.Handler
@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.graphics.scale
 import androidx.lifecycle.ViewModel
 import com.example.screenconnect.models.Phone
+import com.example.screenconnect.models.Position
 import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.models.VirtualScreen
 import com.example.screenconnect.network.MessageClient
@@ -22,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.io.File
+import kotlin.math.roundToInt
 
 class SharedViewModel() : ViewModel() {
 
@@ -139,6 +141,8 @@ class SharedViewModel() : ViewModel() {
 
         if(!isServerRunning && isGroupOwner && isConnected){
             startMessageServer()
+
+            virtualScreen.addHost(thisPhone)
         }
         else if (!isServerRunning && isConnected){
             startMessageClient()
@@ -181,7 +185,6 @@ class SharedViewModel() : ViewModel() {
 
                     imageUri = Uri.fromFile(file)
 
-                    val cropRect = Rect(thisPhone.locationX, thisPhone.locationY, thisPhone.width, thisPhone.height)
                     processReceivedImage(file)
 
                 })
@@ -237,22 +240,39 @@ class SharedViewModel() : ViewModel() {
         Log.d("DPI virtual", virtualScreen.DPI.toString())
         Log.d("DPI phone", thisPhone.DPI.toString())
 
-        val bitmap = upscaleAndCropBitmap(file)
-        Log.d("Bitmap height", bitmap.height.toString())
-        Log.d("Bitmap width", bitmap.width.toString())
+        var bitmap = upscaleAndCropBitmap(file)
+        Log.d("Bitmap height cropped", bitmap.height.toString())
+        Log.d("Bitmap width cropped", bitmap.width.toString())
 
         Log.d("Phone height", thisPhone.height.toString())
         Log.d("Phone width", thisPhone.width.toString())
+
+        if(thisPhone.rotation != 0){
+
+            var matrix = Matrix()
+
+            matrix.postRotate(-1 * thisPhone.rotation.toFloat())
+
+            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+            thisPhone.position = thisPhone.position.rotateWithScreen(Position(virtualScreen.vWidth, virtualScreen.vHeight), thisPhone)
+        }
+
+        Log.d("Phone X", thisPhone.position.x.toString())
+        Log.d("Phone Y", thisPhone.position.y.toString())
 
         if (bitmap != null) {
             // Crop the Bitmap to phone size and location
             val croppedBitmap = Bitmap.createBitmap(
                 bitmap,
-                thisPhone.locationX,
-                thisPhone.locationY,
+                thisPhone.position.x,
+                thisPhone.position.y,
                 thisPhone.width,
                 thisPhone.height
             )
+
+
+
             sharedImage = croppedBitmap
             showImage = true
         } else {
@@ -266,23 +286,31 @@ class SharedViewModel() : ViewModel() {
 
         val ratio = thisPhone.DPI.toDouble()/virtualScreen.DPI.toDouble()
 
+        Log.d("Bitmap height",  bitmap.height.toString())
+        Log.d("Bitmap width", bitmap.width.toString())
+
         val widthRatio = virtualScreen.vWidth.toFloat() / bitmap.width
         val heightRatio = virtualScreen.vHeight.toFloat() / bitmap.height
         val scaleFactor = if (widthRatio > heightRatio) widthRatio else heightRatio
 
+        Log.d("Scale", scaleFactor.toString())
+
         val scaledWidth = (bitmap.width * scaleFactor * ratio).toInt()
-        val scaledHeight = (bitmap.height * scaleFactor * ratio).toInt()
+        val scaledHeight = (bitmap.height * scaleFactor * ratio).toInt() + 2
 
         bitmap = bitmap.scale(scaledWidth, scaledHeight)
 
-        Log.d("height",  bitmap.height.toString())
-        Log.d("width", bitmap.width.toString())
+        Log.d("Bitmap height scaled",  bitmap.height.toString())
+        Log.d("Bitmap width scaled", bitmap.width.toString())
 
-        val widthDiff = (bitmap.width - virtualScreen.vWidth) / 2
-        val heightDiff = (bitmap.height - virtualScreen.vHeight) / 2
+        Log.d("Screen height",  virtualScreen.vWidth.toString())
+        Log.d("Screen width", virtualScreen.vHeight.toString())
 
-        Log.d("height",  widthDiff.toString())
-        Log.d("width", heightDiff.toString())
+        val heightDiff = ((bitmap.height - virtualScreen.vHeight) / 2F).roundToInt()
+        val widthDiff = ((bitmap.width - virtualScreen.vWidth) / 2F).roundToInt()
+
+        Log.d("height diff",  heightDiff.toString())
+        Log.d("width diff", widthDiff.toString())
 
         // Crop the bitmap
         return Bitmap.createBitmap(bitmap, widthDiff, heightDiff, virtualScreen.vWidth, virtualScreen.vHeight)
