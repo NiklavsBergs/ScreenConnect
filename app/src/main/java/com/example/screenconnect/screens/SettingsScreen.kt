@@ -7,13 +7,21 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -25,20 +33,25 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.screenconnect.components.statusBar
 import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.network.Connection
+import com.example.screenconnect.util.getPhoneInfo
 import com.example.screenconnect.util.getRealPathFromUri
 import com.example.screenconnect.util.isLocationEnabled
 import com.example.screenconnect.util.locationPopup
 import com.example.screenconnect.util.wifiPopup
+import com.google.accompanist.systemuicontroller.SystemUiController
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewModel, connection: Connection) {
+
     val context = LocalContext.current
 
     if(sharedViewModel.showImage){
@@ -55,27 +68,42 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
     val endPosition = remember { mutableStateOf(Offset.Zero) }
     var isDragging = false
 
-    Column(modifier = Modifier.fillMaxSize()
-        .pointerInput(Unit){
-            detectDragGestures( onDragStart = { offset ->
+//    val systemUiController: SystemUiController = rememberSystemUiController()
+//    systemUiController.isStatusBarVisible = false // Status bar
+//    systemUiController.isNavigationBarVisible = false // Navigation bar
+
+
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .pointerInput(Unit) {
+            detectDragGestures(onDragStart = { offset ->
                 initialPosition.value = offset
                 isDragging = true
-            }, onDragEnd = {
-                if(isDragging){
-                    endPosition.value = Offset(initialPosition.value.x + dragX.toFloat(), initialPosition.value.y +  dragY.toFloat())
-                    Log.d("DRAG", "End")
 
-                    var swipe = Swipe(initialPosition.value, endPosition.value, sharedViewModel.thisPhone)
-                    sharedViewModel.sendSwipe(swipe)
-                    Log.d("SWIPE-END", endPosition.value.toString())
+            },
+                onDragEnd = {
+                    if (isDragging) {
+                        endPosition.value = Offset(
+                            initialPosition.value.x + dragX.toFloat(),
+                            initialPosition.value.y + dragY.toFloat()
+                        )
+                        Log.d("DRAG", "End")
 
-                    dragX = 0.0
-                    dragY = 0.0
+                        var swipe = Swipe(
+                            initialPosition.value,
+                            endPosition.value,
+                            sharedViewModel.thisPhone
+                        )
+                        sharedViewModel.sendSwipe(swipe)
+                        Log.d("SWIPE-END", endPosition.value.toString())
 
-                    isDragging = false
-                }
+                        dragX = 0.0
+                        dragY = 0.0
 
-            }){ change, dragAmount ->
+                        isDragging = false
+                    }
+
+                }) { change, dragAmount ->
                 change.consume()
                 dragX += dragAmount.x
                 dragY += dragAmount.y
@@ -83,10 +111,11 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                 val newPositionX = initialPosition.value.x + dragX.toFloat()
                 val newPositionY = initialPosition.value.y + dragY.toFloat()
 
-                if(isDragging){
+                if (isDragging) {
 
-                    if (newPositionX >= 10 && newPositionX <= sharedViewModel.thisPhone.width-10 &&
-                        newPositionY >= 10 && newPositionY <= sharedViewModel.thisPhone.height-10) {
+                    if (newPositionX >= 10 && newPositionX <= sharedViewModel.thisPhone.width - 10 &&
+                        newPositionY >= 10 && newPositionY <= sharedViewModel.thisPhone.height - 10
+                    ) {
                         // If position is within bounds, continue drag
                     } else {
                         // Position is outside bounds, end drag event
@@ -94,7 +123,11 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                         dragX = 0.0
                         dragY = 0.0
 
-                        var swipe = Swipe(initialPosition.value, endPosition.value, sharedViewModel.thisPhone)
+                        var swipe = Swipe(
+                            initialPosition.value,
+                            endPosition.value,
+                            sharedViewModel.thisPhone
+                        )
                         Log.d("DRAG", "Out of bounds")
                         Log.d("SWIPE-END", endPosition.value.toString())
                         //Log.d("Drag", initialPosition.value.toString() + ", " + endPosition.value.toString())
@@ -165,7 +198,8 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                             Toast.makeText(context, "Please enable WiFi and Location", Toast.LENGTH_SHORT).show()
                         }
                     },
-                    modifier = Modifier.padding(top = 16.dp)
+                    modifier = Modifier
+                        .padding(top = 16.dp)
                         .align(alignment = Alignment.CenterHorizontally)
                 ) {
                     Text(text = "Discover Peers")
@@ -189,7 +223,8 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                     onClick = {
                         connection.disconnect()
                     },
-                    modifier = Modifier.padding(top = 16.dp)
+                    modifier = Modifier
+                        .padding(top = 16.dp)
                         .align(alignment = Alignment.CenterHorizontally)
                 ) {
                     Text(text = "Disconnect")
@@ -203,63 +238,13 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                 }
             }
 
+            
 
-
-//            TextField(
-//                value = sharedViewModel.text,
-//                onValueChange = {
-//                    sharedViewModel.text = it
-//                    sharedViewModel.sendText(sharedViewModel.text)
-//
-//                },
-//                label = { Text("Shared text") }
-//            )
-//
-//            Text(
-//                text = "VirtualHeight: ${sharedViewModel.virtualHeight}",
-//                modifier = Modifier.padding(top = 16.dp)
-//            )
-//            Text(
-//                text = "VirtualWidth: ${sharedViewModel.virtualWidth}",
-//                modifier = Modifier.padding(top = 16.dp)
-//            )
-//            Text(
-//                text = "ThisPhone: ${sharedViewModel.phoneNr}",
-//                modifier = Modifier.padding(top = 16.dp)
-//            )
-
-            //Image select and display
-
-
-//                    AsyncImage(
-//                        model = sharedViewModel.imageUri,
-//                        contentDescription = null,
-//                        modifier = Modifier
-//                            .padding(4.dp)
-//                            .width(100.dp)
-//                            .height(100.dp)
-//                            .clip(RoundedCornerShape(12.dp)),
-//                        contentScale = ContentScale.Crop,
-//                    )
-
-
-
-//                    Button(onClick = {
-//                        sharedViewModel.sendPhoneInfo()
-//                    }) {
-//                        Text(text = "send info")
-//                    }
-
-//            Button(
-//                onClick = {
-//
-//                },
-//                modifier = Modifier.padding(top = 16.dp)
-//            ) {
-//                Text(text = "Show screen")
-//            }
         }
+
     }
+
+
 
 }
 

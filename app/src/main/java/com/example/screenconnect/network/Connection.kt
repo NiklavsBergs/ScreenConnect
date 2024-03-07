@@ -54,6 +54,7 @@ class Connection(val context: Context, val activity: MainActivity, val sharedVie
         manager?.requestConnectionInfo(channel, WifiP2pManager.ConnectionInfoListener { info ->
             if (info.groupFormed) {
                 sharedViewModel.isGroupOwner = info.isGroupOwner
+                sharedViewModel.thisPhone.isHost = info.isGroupOwner
                 sharedViewModel.isConnected = true
                 sharedViewModel.connectedDeviceName = info.groupOwnerAddress.hostAddress
                 sharedViewModel.host = info.groupOwnerAddress.hostAddress

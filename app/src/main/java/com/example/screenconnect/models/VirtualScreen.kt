@@ -1,12 +1,19 @@
 package com.example.screenconnect.models
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
 import com.example.screenconnect.enums.Edge
 import com.example.screenconnect.enums.SwipeType
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import java.lang.Integer.max
 import java.lang.Math.abs
+import java.time.Duration
+import java.time.LocalTime
 
 @Serializable
 class VirtualScreen {
@@ -21,14 +28,57 @@ class VirtualScreen {
     var swipes = mutableListOf<Swipe>()
 
     val GAP = 67
+    //val GAP = 134
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun addSwipe(swipe: Swipe): Phone?{
+
+        swipe.time = LocalTime.now()
 
         if(swipes.size == 0){
             swipes.add(swipe)
         }
         else{
+
+            if(swipes[0].phone.id == swipe.phone.id){
+                swipes.clear()
+                swipes.add(swipe)
+
+                Log.d("ID CHECK", "Same phone")
+
+                return null
+            }
+
+            var difference = Duration.between(swipes[0].time, swipe.time)
+
+            if(difference.toMillis() > 500){
+                swipes.clear()
+                swipes.add(swipe)
+
+                Log.d("TIME CHECK", "Difference too big")
+
+                return null
+            }
+
             swipes.add(swipe)
+
+            for(swipe in swipes){
+                if (swipe.edge == Edge.NONE){
+                    swipes.clear()
+                    return null
+                }
+            }
+
+            if(phones.size == 2 && isInScreen(swipes[0].phone) && isInScreen(swipes[1].phone)){
+                phones.clear()
+                vHeight = 0
+                vWidth = 0
+                DPI = 0
+            }
+
+            if(phones.size == 0){
+                addFirst(swipes[0].phone)
+            }
 
             //var type = getSwipeType(swipes[0], swipe)
 
@@ -36,55 +86,11 @@ class VirtualScreen {
 
             connectNewPhone()
 
-
-
-//            var phoneA = swipes[0].phone
-//            var phoneB = swipe.phone
-//
-//            var aboveA = swipes[0].connectionPoint.y
-//            var aboveB = swipe.connectionPoint.y
-//
-//            Log.d("SWIPE-AboveA", aboveA.toString())
-//            Log.d("SWIPE-AboveB", aboveB.toString())
-//
-//
-//            if(aboveA>aboveB){
-//                phoneA.position.y = 0
-//                phoneB.position.y = aboveA - aboveB
-//            }
-//            else{
-//                phoneA.position.y = aboveB - aboveA
-//                phoneB.position.y = 0
-//            }
-//
-//            phoneB.position.x = phoneA.width + GAP
-//
-//
-//            var above = max(swipes[0].connectionPoint.y, swipe.connectionPoint.y)
-//            var below = max(swipes[0].phone.height - swipes[0].connectionPoint.y, swipe.phone.height - swipe.connectionPoint.y)
-//
-//            Log.d("SWIPE-Above", above.toString())
-//            Log.d("SWIPE-Below", below.toString())
-//
-//            vHeight = above + below
-//
-//            vWidth = swipes[0].phone.width + GAP + swipe.phone.width
-
             swipes.clear()
-
-//            addPhone(phoneA)
-//            addPhone(phoneB)
-//
-//            if(phoneA.isHost){
-//                return phoneA
-//            }
-//
-//            if(phoneB.isHost){
-//                return phoneB
-//            }
 
             for(phone in phones){
                 if (phone.isHost){
+                    Log.d("RETURN HOST", "Returned")
                     return phone
                 }
             }
@@ -139,7 +145,10 @@ class VirtualScreen {
 
     }
 
-    fun addHost(phone: Phone){
+    fun addFirst(phone: Phone){
+
+        phone.position = Position(0, 0)
+        phone.rotation = 0
         phones.add(phone)
 
         DPI = phone.DPI
@@ -267,13 +276,34 @@ class VirtualScreen {
         Log.d("A Con p", swipeAPos.toString())
         Log.d("B Con p", swipeBPos.toString())
 
+        //Center devices
+
+        val changeCenter = centerB.centerBy(centerA)
+
+        var change = Position(0, 0)
+
         var changeA = Position(swipeAPos.x - centerA.x, swipeAPos.y - centerA.y)
         var changeB = Position(centerB.x - swipeBPos.x, centerB.y - swipeBPos.y)
 
-        var change = changeA
-
-        Log.d("Change A", change.toString())
+        Log.d("Change A", changeA.toString())
         Log.d("Change B", changeB.toString())
+
+        change += changeCenter
+        Log.d("Change + Center", change.toString())
+
+        change += changeA
+        Log.d("Change + ChangeA", change.toString())
+        // ADD GAP
+
+        when(swipeB.edge){
+            Edge.LEFT -> changeB.x += GAP
+            Edge.TOP -> changeB.y += GAP
+            Edge.RIGHT -> changeB.x -= GAP
+            Edge.BOTTOM -> changeB.y -= GAP
+            Edge.NONE -> {}
+        }
+
+        Log.d("ChangeB with GAP", changeB.toString())
 
         var isLandscape = false
 
@@ -288,8 +318,10 @@ class VirtualScreen {
 
         if(abs(rotation) == 90){
             Log.d("Rotation calc", (centerB.y - centerB.x).toString())
-            change.x = changeA.x - (centerB.y - centerB.x)
-            change.y = changeA.y + (centerB.y - centerB.x)
+//            change.x = changeA.x - (centerB.y - centerB.x)
+//            change.y = changeA.y + (centerB.y - centerB.x)
+            change.x = change.x - (centerB.y - centerB.x)
+            change.y = change.y + (centerB.y - centerB.x)
             Log.d("Change after ROT", change.toString())
 
             changeB = changeB.rotate(rotation)
@@ -303,6 +335,8 @@ class VirtualScreen {
             changeB = changeB.rotate(rotation)
             Log.d("ChangeB after ROT", changeB.toString())
         }
+
+        changeB += changeCenter
 
         change += changeB
 
@@ -320,6 +354,8 @@ class VirtualScreen {
         Log.d("PhoneB Y", posB.y.toString())
         Log.d("PhoneB isLandscape", isLandscape.toString())
 
+        //\addGap(posB, phoneB)
+
         // Check if B goes outside screen, if it does, change screen
         if(isLandscape){
             if (posB.x < 0){
@@ -336,7 +372,9 @@ class VirtualScreen {
 
             if (posB.y < 0){
                 // Add difference to screen height
+                Log.d("V Height before", vHeight.toString())
                 vHeight += -1* posB.y
+                Log.d("V Height after", vHeight.toString())
                 // Shift all phones in Y axis by difference
                 shiftPhones(Position(0, -1* posB.y))
                 posB.y = 0

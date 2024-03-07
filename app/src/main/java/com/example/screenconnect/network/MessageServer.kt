@@ -61,12 +61,12 @@ class MessageServer (
                     val type = socketDIS?.readUTF()
 
                     if(type?.compareTo("Info") == 0) {
-                        Log.d("CLIENT-RECEIVE","Receiving info")
+                        Log.d("SERVER-RECEIVE","Receiving info")
                         val message = socketDIS?.readUTF()
                         messageReceivedCallback(message!!)
                     }
                     else if (type?.compareTo("Image") == 0){
-                        Log.d("CLIENT-RECEIVE","Receiving image")
+                        Log.d("SERVER-RECEIVE","Receiving image")
                         receiveImage()
                     }
 

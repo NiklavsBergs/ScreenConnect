@@ -13,20 +13,24 @@ import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Display
+import android.view.WindowManager
+import androidx.annotation.RequiresApi
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import kotlin.system.exitProcess
 
-fun getPhoneInfo(context: Context): com.example.screenconnect.models.Phone {
-    val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-    val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+@RequiresApi(Build.VERSION_CODES.R)
+fun getPhoneInfo(context: Context, windowManager: WindowManager): com.example.screenconnect.models.Phone {
 
-    val displayMetrics = DisplayMetrics()
-    display.getMetrics(displayMetrics)
+    val displayMetrics = context.resources.displayMetrics
+
+    windowManager.defaultDisplay.getRealMetrics(displayMetrics)
 
     val height = displayMetrics.heightPixels
     val width = displayMetrics.widthPixels
     val xDPI = displayMetrics.xdpi.toInt()
     val yDPI = displayMetrics.ydpi.toInt()
-//    val DPI = displayMetrics.densityDpi
+
     val DPI = (xDPI+yDPI)/2
 
     Log.d("DPI", DPI.toString())
@@ -98,3 +102,5 @@ fun getRealPathFromUri(uri: Uri, context: Context): String? {
     }
     return filePath
 }
+
+

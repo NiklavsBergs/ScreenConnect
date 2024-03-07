@@ -52,10 +52,14 @@ android {
 
 dependencies {
 
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0-RC")
+
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
     implementation ("com.google.dagger:hilt-android:2.50")
     annotationProcessor ("com.google.dagger:hilt-compiler:2.50")
+
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.28.0")
 
     implementation("androidx.navigation:navigation-compose:2.5.3")
     implementation("io.coil-kt:coil-compose:2.5.0")

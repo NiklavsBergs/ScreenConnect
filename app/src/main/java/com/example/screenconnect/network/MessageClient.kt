@@ -1,5 +1,6 @@
 package com.example.screenconnect.network
 
+import android.os.Build
 import android.os.Environment
 import android.util.Log
 import com.example.screenconnect.models.Phone
@@ -171,7 +172,16 @@ class MessageClient (
 
         var fileLength = socketDIS?.readLong()
 
+
+
         val fileToSave = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath, fileName)
+//        if(Build.VERSION.SDK_INT < 30) {
+//            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+//        }
+//        else{
+//            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath, fileName)
+//        }
+
         val fileOutputStream = FileOutputStream(fileToSave)
         val bufferArray = ByteArray(5_000_000)
 
