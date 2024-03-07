@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
 import com.example.screenconnect.enums.Edge
+import com.example.screenconnect.enums.SwipeType
 import kotlinx.datetime.Clock
 //import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
@@ -35,7 +36,12 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
     @Serializable(with = LocalTimeSerializer::class)
     var time = LocalTime.now()
 
+    var type: SwipeType = SwipeType.NONE
 
+    private val BORDER_HOR = phone.height / 10
+    private val BORDER_VERT = phone.width / 10
+
+    private val MIN_SWIPE = 10
 
     init {
         if(connectionPoint.x == -1){
@@ -44,52 +50,65 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
         }
     }
 
-    fun calculateEdgeIntersection(): Position {
-        // Calculate the slope of the line
-        var slope = (end.y - start.y) / (end.x - start.x)
+    private fun isDisconnectSwipe(): Boolean{
+        return if(start.x < BORDER_VERT && (end.x > BORDER_VERT && end.x < phone.width - BORDER_VERT)){
+            type = SwipeType.DISCONNECT
+            true
+        } else{
+            false
+        }
+    }
 
-        if(slope == Float.POSITIVE_INFINITY || slope == Float.NEGATIVE_INFINITY){
-            slope = 100F
+    fun calculateEdgeIntersection(): Position {
+
+        if(isDisconnectSwipe()){
+            type = SwipeType.DISCONNECT
+            return Position(0,0)
         }
 
-        val intersections = mutableListOf<Position>()
+        val diffX = end.x - start.x
+        val diffY = end.y - start.y
 
-        val edges = mutableListOf<Edge>()
+        var slope = diffY / diffX
+
+        if(slope == Float.POSITIVE_INFINITY){
+            slope = 100F
+        }
+        else if(slope == Float.NEGATIVE_INFINITY){
+            slope = -100F
+        }
 
         val yIntercept = start.y - slope * start.x
 
-        val xLessThanStart = start.x > end.x
+        if(abs(diffX) > abs(diffY) && abs(diffX) > MIN_SWIPE){
+            if(end.x < start.x && end.x < BORDER_VERT){
+                edge = Edge.LEFT
+                type = SwipeType.CONNECT
 
-        val yLessThanStart = start.y > end.y
+                return Position(0, yIntercept.roundToInt())
+            }
+            else if(end.x > start.x && end.x > phone.width -  BORDER_VERT){
+                edge = Edge.RIGHT
+                type = SwipeType.CONNECT
 
-        if(abs(slope)<100){
-            //LEFT
-            intersections.add(Position(0, yIntercept.roundToInt()))
-            //RIGHT
-            intersections.add(Position(phone.width, (phone.width*slope + yIntercept).roundToInt()))
-
-            edges.add(Edge.LEFT)
-            edges.add(Edge.RIGHT)
-        }
-        if(abs(slope)>0.01){
-            //TOP
-            intersections.add(Position((abs(yIntercept)/abs(slope)).roundToInt(), 0))
-            //BOTTOM
-            intersections.add(Position(((phone.height-yIntercept)/slope).roundToInt(), phone.height))
-
-            edges.add(Edge.TOP)
-            edges.add(Edge.BOTTOM)
-        }
-
-        for(i in 0 until intersections.size){
-            if(intersections[i].x in 0..phone.width && intersections[i].y in 0 ..phone.height){
-                if((intersections[i].x < start.x) == xLessThanStart && (intersections[i].y < start.y) == yLessThanStart){
-                    Log.d("INT-ACTUAL", intersections[i].toString())
-                    edge = edges[i]
-                    return intersections[i]
-                }
+                return Position(phone.width, (phone.width*slope + yIntercept).roundToInt())
             }
         }
+        else if(abs(diffY) > abs(diffX) && abs(diffY) > MIN_SWIPE){
+            if(end.y < start.y && end.y < BORDER_HOR){
+                edge = Edge.TOP
+                type = SwipeType.CONNECT
+
+                return Position((abs(yIntercept)/abs(slope)).roundToInt(), 0)
+            }
+            else if(end.y > start.y && end.y > phone.height -  BORDER_HOR) {
+                edge = Edge.BOTTOM
+                type = SwipeType.CONNECT
+
+                return Position(((phone.height-yIntercept)/slope).roundToInt(), phone.height)
+            }
+        }
+
 
         return Position(0, 0)
     }
@@ -121,18 +140,3 @@ object LocalTimeSerializer : KSerializer<LocalTime> {
         return LocalTime.parse(decoder.decodeString())
     }
 }
-
-
-
-//object PositionSerializer : KSerializer<Position> {
-//    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Position", PrimitiveKind.STRING)
-//
-//    override fun serialize(encoder: Encoder, value: Position) {
-//        encoder.encodeString("${value.x},${value.y}")
-//    }
-//
-//    override fun deserialize(decoder: Decoder): Position {
-//        val (x, y) = decoder.decodeString().split(",").map { it.toInt() }
-//        return Position(x, y)
-//    }
-//}

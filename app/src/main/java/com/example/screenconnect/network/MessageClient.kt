@@ -84,21 +84,6 @@ class MessageClient (
 
     }
 
-    fun send(message: String){
-        Log.d("CLIENT-SEND", "Sending...")
-
-
-            try{
-                outputStream?.write(message.toByteArray())
-
-                Log.d("CLIENT-SEND", message)
-            }
-            catch (e: IOException){
-                Log.d("CLIENT-SEND-ERROR", e.toString())
-            }
-            Log.d("CLIENT-SEND-SOCKET", socket?.isClosed.toString())
-    }
-
     fun sendPhoneInfo(phone: Phone){
         Log.d("CLIENT-SEND", "Sending...")
 
@@ -172,15 +157,7 @@ class MessageClient (
 
         var fileLength = socketDIS?.readLong()
 
-
-
         val fileToSave = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath, fileName)
-//        if(Build.VERSION.SDK_INT < 30) {
-//            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-//        }
-//        else{
-//            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath, fileName)
-//        }
 
         val fileOutputStream = FileOutputStream(fileToSave)
         val bufferArray = ByteArray(5_000_000)

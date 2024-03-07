@@ -26,21 +26,14 @@ class MessageServer (
     private val messageReceivedCallback: (String) -> Unit
     ) : Thread(), MessageReceivedListener{
 
-    private val connectLimit = 5
+    private val connectLimit = 10
     private val socketThreads = mutableListOf<SocketThread>()
-
-//    var serverSocket:ServerSocket? = null
-//    var socket: Socket? = null
-//    var inputStream: InputStream? = null
-//    var outputStream: OutputStream? = null
-//
-//    var socketDOS: DataOutputStream? = null
-//    var socketDIS: DataInputStream? = null
 
     override fun run() {
         var serverSocket: ServerSocket? = null
         try {
             serverSocket = ServerSocket(8888)
+
             while (socketThreads.size <= connectLimit) {
                 val socket = serverSocket.accept()
                 val socketThread = SocketThread(socket, this)
@@ -58,6 +51,21 @@ class MessageServer (
         messageReceivedCallback(message)
     }
 
+    fun updateClientInfo(screen: VirtualScreen){
+        var phones = screen.phones
+
+        for(client in socketThreads){
+            for(phone in phones){
+                if(client.phoneId == phone.id){
+                    client.sendClientInfo(phone)
+                }
+            }
+        }
+
+        sendScreenInfo(screen)
+
+    }
+
     fun sendClientInfo(phone: Phone){
         for(client in socketThreads){
             if(client.phoneId == phone.id){
@@ -71,6 +79,16 @@ class MessageServer (
         socketThreads.forEach {
             if(screen.isInScreenById(it.phoneId)){
                 it.sendScreenInfo(screen)
+            }
+        }
+
+    }
+
+    fun sendScreenInfo(screen: VirtualScreen, phone: Phone){
+
+        for(client in socketThreads){
+            if(client.phoneId == phone.id){
+                client.sendScreenInfo(screen)
             }
         }
 

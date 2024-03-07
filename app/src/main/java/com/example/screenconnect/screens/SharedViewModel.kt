@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.graphics.scale
 import androidx.lifecycle.ViewModel
+import com.example.screenconnect.enums.SwipeType
 import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.Position
 import com.example.screenconnect.models.Swipe
@@ -77,16 +78,16 @@ class SharedViewModel() : ViewModel() {
         else{
             if (isGroupOwner) {
                 serverScope.launch {
-                    var updatedServerPhone = virtualScreen.addSwipe(swipe)
-
-                    if(updatedServerPhone != null){
-                        thisPhone = updatedServerPhone
-
-                        //messageServer.sendClientInfo(virtualScreen.phones[0])
-                        Thread.sleep(25)
-                        //messageServer.sendScreenInfo(virtualScreen)
-
+                    var phoneAdded = virtualScreen.addSwipe(swipe) {
+                            phone ->
+                        thisPhone = phone
                         activeFoto?.let { processReceivedImage(it) }
+                    }
+
+                    if(phoneAdded){
+                        messageServer.sendClientInfo(virtualScreen.phones[0])
+                        Thread.sleep(25)
+                        messageServer.sendScreenInfo(virtualScreen)
                     }
 
                     Log.d("MESSAGE-SERVER", "Sending...")
@@ -233,21 +234,34 @@ class SharedViewModel() : ViewModel() {
         var swipe = Json.decodeFromString<Swipe>(message)
 
         Log.d("SWIPE-RECEIVED", swipe.toString())
+        var phoneAdded = false
 
-        //var updatedPhone = virtualScreen.addPhone(Json.decodeFromString<PhoneScreen>(message))
-        var hostUpdate = virtualScreen.addSwipe(swipe)
+        if(swipe.type == SwipeType.DISCONNECT){
+            var removedPhone = swipe.phone
+            virtualScreen.removePhone(removedPhone)
 
-        if(isGroupOwner && hostUpdate != null){
+            removedPhone.position = Position(0,0)
+            removedPhone.rotation = 0
+            messageServer.sendClientInfo(removedPhone)
 
-            Thread.sleep(25)
-            messageServer.sendClientInfo(virtualScreen.phones[1])
-            Thread.sleep(25)
-            messageServer.sendScreenInfo(virtualScreen)
+            var tempScreen = VirtualScreen()
+            tempScreen.vHeight = removedPhone.height
+            tempScreen.vWidth = removedPhone.width
 
-            thisPhone = hostUpdate
+            messageServer.sendScreenInfo(tempScreen, removedPhone)
+        }
 
+        phoneAdded = virtualScreen.addSwipe(swipe) {
+                phone ->
+            thisPhone = phone
             activeFoto?.let { processReceivedImage(it) }
+        }
 
+        if(phoneAdded){
+            Thread.sleep(25)
+            messageServer.updateClientInfo(virtualScreen)
+            //Thread.sleep(25)
+            //messageServer.sendScreenInfo(virtualScreen)
         }
 
     }
