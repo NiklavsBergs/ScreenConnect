@@ -82,9 +82,9 @@ class SharedViewModel() : ViewModel() {
                     if(updatedServerPhone != null){
                         thisPhone = updatedServerPhone
 
-                        messageServer.sendClientInfo(virtualScreen.phones[0])
+                        //messageServer.sendClientInfo(virtualScreen.phones[0])
                         Thread.sleep(25)
-                        messageServer.sendScreenInfo(virtualScreen)
+                        //messageServer.sendScreenInfo(virtualScreen)
 
                         activeFoto?.let { processReceivedImage(it) }
                     }
@@ -136,7 +136,7 @@ class SharedViewModel() : ViewModel() {
         else{
             if (isGroupOwner) {
                 serverScope.launch {
-                    messageServer.sendPhoneInfo(phone)
+                    //messageServer.sendPhoneInfo(phone)
                     Log.d("MESSAGE-SERVER", "Sending...")
                 }
             } else {

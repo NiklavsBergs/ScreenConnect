@@ -38,7 +38,6 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
 
 
     init {
-        Log.d("TIME", LocalTime.now().toString())
         if(connectionPoint.x == -1){
             connectionPoint = calculateEdgeIntersection()
             Log.d("SWIPE", Json.encodeToString(this))

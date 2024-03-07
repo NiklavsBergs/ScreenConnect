@@ -24,198 +24,202 @@ import java.net.Socket
 class MessageServer (
     private val thisPhone: Phone,
     private val messageReceivedCallback: (String) -> Unit
-    ) : Thread(){
+    ) : Thread(), MessageReceivedListener{
 
-    var serverSocket:ServerSocket? = null
-    var socket: Socket? = null
-    var inputStream: InputStream? = null
-    var outputStream: OutputStream? = null
+    private val connectLimit = 5
+    private val socketThreads = mutableListOf<SocketThread>()
 
-    var socketDOS: DataOutputStream? = null
-    var socketDIS: DataInputStream? = null
+//    var serverSocket:ServerSocket? = null
+//    var socket: Socket? = null
+//    var inputStream: InputStream? = null
+//    var outputStream: OutputStream? = null
+//
+//    var socketDOS: DataOutputStream? = null
+//    var socketDIS: DataInputStream? = null
 
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
-
-    override fun run(){
-
-            try{
-                serverSocket = ServerSocket(8888)
-                socket = serverSocket?.accept()
-                inputStream = socket?.getInputStream()
-                outputStream = socket?.getOutputStream()
-
-                socketDOS = DataOutputStream(BufferedOutputStream(outputStream))
-                socketDIS = DataInputStream(BufferedInputStream(inputStream))
-
-                Log.d("SERVER-START", socket?.remoteSocketAddress.toString())
-                //sendPhoneInfo(thisPhone)
+    override fun run() {
+        var serverSocket: ServerSocket? = null
+        try {
+            serverSocket = ServerSocket(8888)
+            while (socketThreads.size <= connectLimit) {
+                val socket = serverSocket.accept()
+                val socketThread = SocketThread(socket, this)
+                socketThreads.add(socketThread)
+                socketThread.start()
             }
-            catch (e: IOException) {
-                Log.d("SERVER-INIT", e.toString())
-            }
-
-            Log.d("SERVER-RECEIVE", "Running")
-            while(socket!=null && !socket!!.isClosed){
-                try{
-
-                    val type = socketDIS?.readUTF()
-
-                    if(type?.compareTo("Info") == 0) {
-                        Log.d("SERVER-RECEIVE","Receiving info")
-                        val message = socketDIS?.readUTF()
-                        messageReceivedCallback(message!!)
-                    }
-                    else if (type?.compareTo("Image") == 0){
-                        Log.d("SERVER-RECEIVE","Receiving image")
-                        receiveImage()
-                    }
-
-                } catch (e: IOException) {
-                    Log.d("SERVER-RECEIVE", e.toString())
-                    break
-                }
-
-            }
-            Log.d("SERVER-RECEIVE-END", "ENDED")
-
-
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } finally {
+            serverSocket?.close()
+        }
     }
 
-    fun send(message: String){
-        Log.d("SERVER-SEND", "Starting...")
-                try{
-                    outputStream?.write(message.toByteArray())
-
-                    Log.d("SERVER-SEND", message)
-                }
-                catch (e: IOException){
-                    Log.d("SERVER-SEND", e.toString())
-                }
-    }
-
-    fun sendPhoneInfo(phone: Phone){
-        Log.d("SERVER-SEND", "Sending...")
-
-        try{
-            socketDOS!!.writeUTF("Info")
-
-            var phoneInfo = "PhoneInfo:" + phone.height + "," + phone.width + "," + phone.DPI + "," + phone.phoneName + "," + phone.id
-            //outputStream?.write(phoneInfo.toByteArray())
-            socketDOS!!.writeUTF(phoneInfo)
-
-            socketDOS!!.flush()
-
-            Log.d("SERVER-SEND-INFO", phoneInfo)
-        }
-        catch (e: IOException){
-            Log.d("SERVER-SEND-ERROR", e.toString())
-        }
-        Log.d("SERVER-SEND-SOCKET-CLOSED", socket?.isClosed.toString())
+    override fun onMessageReceived(message: String){
+        messageReceivedCallback(message)
     }
 
     fun sendClientInfo(phone: Phone){
-        Log.d("SERVER-SEND", "Sending...")
-
-        try{
-            socketDOS!!.writeUTF("Info")
-
-            //var phoneInfo = "PhoneInfo:" + phone.locationX + "," + phone.locationY + "," + phone.nr
-            var phoneInfo = "PhoneInfo*" + Json.encodeToString(phone)
-
-            //var phoneInfo = Json.encodeToString(phone)
-
-            socketDOS!!.writeUTF(phoneInfo)
-
-            socketDOS!!.flush()
-
-            Log.d("SERVER-SEND-INFO", phoneInfo)
+        for(client in socketThreads){
+            if(client.phoneId == phone.id){
+                client.sendClientInfo(phone)
+            }
         }
-        catch (e: IOException){
-            Log.d("SERVER-SEND-ERROR", e.toString())
-        }
-        Log.d("SERVER-SEND-SOCKET-CLOSED", socket?.isClosed.toString())
     }
 
     fun sendScreenInfo(screen: VirtualScreen){
-        Log.d("SERVER-SEND", "Sending...")
 
-        try{
-            socketDOS!!.writeUTF("Info")
-
-            //var screenInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth + "," + screen.DPI
-            var screenInfo = "ScreenInfo*" + Json.encodeToString(screen)
-            //var screenInfo = Json.encodeToString(screen)
-
-            socketDOS!!.writeUTF(screenInfo)
-
-            socketDOS!!.flush()
-
-            Log.d("SERVER-SEND-INFO", screenInfo)
+        socketThreads.forEach {
+            if(screen.isInScreenById(it.phoneId)){
+                it.sendScreenInfo(screen)
+            }
         }
-        catch (e: IOException){
-            Log.d("SERVER-SEND-ERROR", e.toString())
-        }
-        Log.d("SERVER-SOCKET-CLOSED", socket?.isClosed.toString())
+
     }
 
     fun sendImage(file: File){
-
-        if(socketDOS != null) {
-            socketDOS!!.writeUTF("Image")
-
-            socketDOS!!.writeUTF(file.name)
-
-            socketDOS!!.writeLong(file.length())
-
-            Log.d("SERVER-SEND-IMAGE", file.name)
-
-            val fileIS = FileInputStream(file)
-            val bufferArray = ByteArray(5_000_000)
-            var lengthRead: Int
-
-            while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
-                socketDOS!!.write(bufferArray, 0, lengthRead)
-            }
-            fileIS.close()
-        }
+        socketThreads.forEach { it.sendImage(file) }
     }
-
-    fun receiveImage(){
-
-        val fileName = socketDIS?.readUTF()
-
-        var fileLength = socketDIS?.readLong()
-
-        val fileToSave = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath, fileName)
-        val fileOutputStream = FileOutputStream(fileToSave)
-        val bufferArray = ByteArray(5_000_000)
-
-        Log.d("CLIENT-SAVE-IMAGE", fileToSave.path)
-
-        if(fileLength != null) {
-            while (fileLength > 0) {
-                val bytesRead =
-                    socketDIS?.read(bufferArray, 0,
-                        Integer.min(fileLength.toInt(), bufferArray.size)
-                    )
-                if (bytesRead == -1) break
-                fileOutputStream.write(bufferArray, 0, bytesRead!!)
-                fileLength -= bytesRead!!
-            }
-        }
-
-        fileOutputStream.flush()
-        fileOutputStream.close()
-        Log.d("CLIENT-RECEIVE","Image saved")
-    }
-
 
     fun close() {
-        try {
-            socket?.close()
-            serverSocket?.close()
-        } catch (e: IOException) {
-            Log.e("SERVER-STOP", e.toString())
-        }
+        //serverSocket?.close()
+        socketThreads.forEach { it.interrupt() }
     }
+
+//    fun send(message: String){
+//        Log.d("SERVER-SEND", "Starting...")
+//                try{
+//                    outputStream?.write(message.toByteArray())
+//
+//                    Log.d("SERVER-SEND", message)
+//                }
+//                catch (e: IOException){
+//                    Log.d("SERVER-SEND", e.toString())
+//                }
+//    }
+
+//    fun sendPhoneInfo(phone: Phone){
+//        Log.d("SERVER-SEND", "Sending...")
+//
+//        try{
+//            socketDOS!!.writeUTF("Info")
+//
+//            var phoneInfo = "PhoneInfo:" + phone.height + "," + phone.width + "," + phone.DPI + "," + phone.phoneName + "," + phone.id
+//            //outputStream?.write(phoneInfo.toByteArray())
+//            socketDOS!!.writeUTF(phoneInfo)
+//
+//            socketDOS!!.flush()
+//
+//            Log.d("SERVER-SEND-INFO", phoneInfo)
+//        }
+//        catch (e: IOException){
+//            Log.d("SERVER-SEND-ERROR", e.toString())
+//        }
+//        Log.d("SERVER-SEND-SOCKET-CLOSED", socket?.isClosed.toString())
+//    }
+
+//    fun sendClientInfo(phone: Phone){
+//        Log.d("SERVER-SEND", "Sending...")
+//
+//        try{
+//            socketDOS!!.writeUTF("Info")
+//
+//            //var phoneInfo = "PhoneInfo:" + phone.locationX + "," + phone.locationY + "," + phone.nr
+//            var phoneInfo = "PhoneInfo*" + Json.encodeToString(phone)
+//
+//            //var phoneInfo = Json.encodeToString(phone)
+//
+//            socketDOS!!.writeUTF(phoneInfo)
+//
+//            socketDOS!!.flush()
+//
+//            Log.d("SERVER-SEND-INFO", phoneInfo)
+//        }
+//        catch (e: IOException){
+//            Log.d("SERVER-SEND-ERROR", e.toString())
+//        }
+//        Log.d("SERVER-SEND-SOCKET-CLOSED", socket?.isClosed.toString())
+//    }
+//
+//    fun sendScreenInfo(screen: VirtualScreen){
+//        Log.d("SERVER-SEND", "Sending...")
+//
+//        try{
+//            socketDOS!!.writeUTF("Info")
+//
+//            //var screenInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth + "," + screen.DPI
+//            var screenInfo = "ScreenInfo*" + Json.encodeToString(screen)
+//            //var screenInfo = Json.encodeToString(screen)
+//
+//            socketDOS!!.writeUTF(screenInfo)
+//
+//            socketDOS!!.flush()
+//
+//            Log.d("SERVER-SEND-INFO", screenInfo)
+//        }
+//        catch (e: IOException){
+//            Log.d("SERVER-SEND-ERROR", e.toString())
+//        }
+//        Log.d("SERVER-SOCKET-CLOSED", socket?.isClosed.toString())
+//    }
+//
+//    fun sendImage(file: File){
+//
+//        if(socketDOS != null) {
+//            socketDOS!!.writeUTF("Image")
+//
+//            socketDOS!!.writeUTF(file.name)
+//
+//            socketDOS!!.writeLong(file.length())
+//
+//            Log.d("SERVER-SEND-IMAGE", file.name)
+//
+//            val fileIS = FileInputStream(file)
+//            val bufferArray = ByteArray(5_000_000)
+//            var lengthRead: Int
+//
+//            while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
+//                socketDOS!!.write(bufferArray, 0, lengthRead)
+//            }
+//            fileIS.close()
+//        }
+//    }
+//
+//    fun receiveImage(){
+//
+//        val fileName = socketDIS?.readUTF()
+//
+//        var fileLength = socketDIS?.readLong()
+//
+//        val fileToSave = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath, fileName)
+//        val fileOutputStream = FileOutputStream(fileToSave)
+//        val bufferArray = ByteArray(5_000_000)
+//
+//        Log.d("CLIENT-SAVE-IMAGE", fileToSave.path)
+//
+//        if(fileLength != null) {
+//            while (fileLength > 0) {
+//                val bytesRead =
+//                    socketDIS?.read(bufferArray, 0,
+//                        Integer.min(fileLength.toInt(), bufferArray.size)
+//                    )
+//                if (bytesRead == -1) break
+//                fileOutputStream.write(bufferArray, 0, bytesRead!!)
+//                fileLength -= bytesRead!!
+//            }
+//        }
+//
+//        fileOutputStream.flush()
+//        fileOutputStream.close()
+//        Log.d("CLIENT-RECEIVE","Image saved")
+//    }
+
+
+//    fun close() {
+//        try {
+//            socket?.close()
+//            serverSocket?.close()
+//        } catch (e: IOException) {
+//            Log.e("SERVER-STOP", e.toString())
+//        }
+//    }
 }

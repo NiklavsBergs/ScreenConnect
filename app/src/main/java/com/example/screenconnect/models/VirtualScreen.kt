@@ -40,6 +40,10 @@ class VirtualScreen {
         }
         else{
 
+            if(phones.size == 1 && phones[0].isHost){
+                resetScreen()
+            }
+
             if(swipes[0].phone.id == swipe.phone.id){
                 swipes.clear()
                 swipes.add(swipe)
@@ -70,19 +74,12 @@ class VirtualScreen {
             }
 
             if(phones.size == 2 && isInScreen(swipes[0].phone) && isInScreen(swipes[1].phone)){
-                phones.clear()
-                vHeight = 0
-                vWidth = 0
-                DPI = 0
+                resetScreen()
             }
 
             if(phones.size == 0){
                 addFirst(swipes[0].phone)
             }
-
-            //var type = getSwipeType(swipes[0], swipe)
-
-            //New Phone
 
             connectNewPhone()
 
@@ -426,11 +423,21 @@ class VirtualScreen {
         }
     }
 
-    fun getBPosition(screenConPoint: Position, phoneConPoint: Position): Position{
+    private fun resetScreen(){
+        phones.clear()
+        vHeight = 0
+        vWidth = 0
+        DPI = 0
+    }
 
+    fun isInScreenById(id : String): Boolean{
+        phones.forEach {
+            if(it.id == id){
+                return true
+            }
+        }
 
-
-        return Position(0, 0)
+        return false
     }
 
 }
