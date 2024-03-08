@@ -29,35 +29,38 @@ class MessageClient (
     private val messageReceivedCallback: (String) -> Unit,
     private val imageReceivedCallback: (File) -> Unit
 ) : Thread(){
-    var socket: Socket = Socket()
-    var inputStream: InputStream? = null
-    var outputStream: OutputStream? = null
 
-    var socketDOS: DataOutputStream? = null
-    var socketDIS: DataInputStream? = null
+    private var socket: Socket = Socket()
+    private var inputStream: InputStream? = null
+    private var outputStream: OutputStream? = null
+
+    private var socketDOS: DataOutputStream? = null
+    private var socketDIS: DataInputStream? = null
+
+    var isConnected = false
 
     override fun run(){
         Log.d("HOST",host)
 
-        try {
-            socket?.connect(InetSocketAddress(host, 8888), 500)
-            inputStream = socket?.getInputStream()
-            outputStream = socket?.getOutputStream()
+        while(!isConnected){
+            try {
+                socket?.connect(InetSocketAddress(host, 8888), 5000)
+                inputStream = socket?.getInputStream()
+                outputStream = socket?.getOutputStream()
 
-            socketDOS = DataOutputStream(BufferedOutputStream(outputStream))
-            socketDIS = DataInputStream(BufferedInputStream(inputStream))
+                socketDOS = DataOutputStream(BufferedOutputStream(outputStream))
+                socketDIS = DataInputStream(BufferedInputStream(inputStream))
 
-            Log.d("CLIENT-START",host)
+                isConnected = true
 
-            //sendPhoneInfo(thisPhone)
+                Log.d("CLIENT-START",host)
 
-
-        } catch (e: IOException) {
-            Log.d("CLIENT-INIT", e.toString())
+            } catch (e: IOException) {
+                Log.d("CLIENT-START-FAIL", e.toString())
+                isConnected = false
+            }
         }
 
-
-        Log.d("CLIENT-RECEIVE", "Running")
         while(socket!=null  && !socket!!.isClosed){
             try{
 
@@ -91,7 +94,6 @@ class MessageClient (
             if(socketDOS != null) {
                 socketDOS!!.writeUTF("Info")
 
-                //var phoneInfo = "PhoneInfo:" + phone.height + "," + phone.width + "," + phone.DPI + "," + phone.phoneName + "," + phone.id
                 var phoneInfo = Json.encodeToString(phone)
 
                 socketDOS!!.writeUTF(phoneInfo)
@@ -151,7 +153,7 @@ class MessageClient (
         }
     }
 
-    fun receiveImage(): File{
+    private fun receiveImage(): File{
 
         val fileName = socketDIS?.readUTF()
 

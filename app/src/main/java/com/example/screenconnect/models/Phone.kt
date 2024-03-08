@@ -22,10 +22,6 @@ class Phone(var heightReal: Int, val widthReal: Int, val DPI: Int, val phoneName
         heightReal += value
 
         height += (value * scaleFactor).toInt()
-
-        Log.d("ABS Scale", scaleFactor.toString())
-        Log.d("ABS HEIGHT", height.toString())
-        Log.d("ABS WIDTH", width.toString())
     }
 
     init {

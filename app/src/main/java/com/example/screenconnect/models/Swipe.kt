@@ -34,12 +34,12 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
     var edge = Edge.NONE
 
     @Serializable(with = LocalTimeSerializer::class)
-    var time = LocalTime.now()
+    var time: LocalTime = LocalTime.now()
 
     var type: SwipeType = SwipeType.NONE
 
-    private val BORDER_HOR = phone.height / 10
-    private val BORDER_VERT = phone.width / 10
+    private val BORDER_HOR = phone.height / 5
+    private val BORDER_VERT = phone.width / 5
 
     private val MIN_SWIPE = 10
 
@@ -59,7 +59,7 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
         }
     }
 
-    fun calculateEdgeIntersection(): Position {
+    private fun calculateEdgeIntersection(): Position {
 
         if(isDisconnectSwipe()){
             type = SwipeType.DISCONNECT
@@ -85,13 +85,13 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
                 edge = Edge.LEFT
                 type = SwipeType.CONNECT
 
-                return Position(0, yIntercept.roundToInt())
+                return Position(0, (yIntercept * phone.scaleFactor).roundToInt())
             }
             else if(end.x > start.x && end.x > phone.width -  BORDER_VERT){
                 edge = Edge.RIGHT
                 type = SwipeType.CONNECT
 
-                return Position(phone.width, (phone.width*slope + yIntercept).roundToInt())
+                return Position(phone.width, ((phone.width*slope + yIntercept) * phone.scaleFactor).roundToInt() )
             }
         }
         else if(abs(diffY) > abs(diffX) && abs(diffY) > MIN_SWIPE){
@@ -99,17 +99,16 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
                 edge = Edge.TOP
                 type = SwipeType.CONNECT
 
-                return Position((abs(yIntercept)/abs(slope)).roundToInt(), 0)
+                return Position((abs(yIntercept)/abs(slope) * phone.scaleFactor).roundToInt(), 0)
             }
             else if(end.y > start.y && end.y > phone.height -  BORDER_HOR) {
                 edge = Edge.BOTTOM
                 type = SwipeType.CONNECT
 
-                return Position(((phone.height-yIntercept)/slope).roundToInt(), phone.height)
+                return Position(((phone.height-yIntercept)/slope * phone.scaleFactor).roundToInt(), phone.height)
             }
         }
-
-
+        
         return Position(0, 0)
     }
 }

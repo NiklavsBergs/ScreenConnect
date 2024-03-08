@@ -32,7 +32,6 @@ import kotlin.math.roundToInt
 
 class SharedViewModel() : ViewModel() {
 
-    var text by mutableStateOf("Hello")
     var infoText by mutableStateOf("Not connected");
     var imageUri by mutableStateOf<Uri?>(null)
 
@@ -62,50 +61,48 @@ class SharedViewModel() : ViewModel() {
     var virtualHeight by mutableStateOf(0)
     var virtualWidth by mutableStateOf(0)
 
-    var phoneNr by mutableStateOf(0)
-
     var showImage by mutableStateOf(false)
     var sharedImage by mutableStateOf<Bitmap>(Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888))
 
-    var activeFoto: File? = null
+    var activePhoto: File? = null
 
 
     fun sendSwipe(swipe: Swipe){
-        Log.d("SEND-SWIPE", "Called")
         if(!isServerRunning){
             startServer()
         }
-        else{
-            if (isGroupOwner) {
-                serverScope.launch {
+
+        if (isGroupOwner) {
+            serverScope.launch {
+                if(swipe.type == SwipeType.DISCONNECT){
+                    virtualScreen.removePhone(thisPhone)
+                    thisPhone.position = Position(0,0)
+                    virtualScreen.height = thisPhone.height
+                    virtualScreen.width = thisPhone.width
+
+                    activePhoto?.let { processReceivedImage(it) }
+                }
+                else if (swipe.type == SwipeType.CONNECT){
                     var phoneAdded = virtualScreen.addSwipe(swipe) {
-                            phone ->
-                        thisPhone = phone
-                        activeFoto?.let { processReceivedImage(it) }
+                            hostUpdated ->
+                        thisPhone = hostUpdated
+                        activePhoto?.let { processReceivedImage(it) }
                     }
 
                     if(phoneAdded){
-                        messageServer.sendClientInfo(virtualScreen.phones[0])
-                        Thread.sleep(25)
-                        messageServer.sendScreenInfo(virtualScreen)
+                        messageServer.updateClientInfo(virtualScreen)
                     }
 
-                    Log.d("MESSAGE-SERVER", "Sending...")
-                }
-            } else {
-                clientScope.launch {
-                    messageClient.sendSwipe(swipe)
-                    Log.d("MESSAGE-CLIENT", "Sent")
+                    Log.d("SERVER", "Swipe added")
                 }
             }
+        } else {
+            clientScope.launch {
+                messageClient.sendSwipe(swipe)
+                Log.d("CLIENT", "Swipe sent")
+            }
         }
-    }
 
-    fun sendPhoneInfo(){
-        serverScope.launch {
-            messageClient.sendPhoneInfo(thisPhone)
-            Log.d("MESSAGE-SERVER", "Info Sent")
-        }
     }
 
     fun sendImage(file: File){
@@ -113,48 +110,26 @@ class SharedViewModel() : ViewModel() {
         if(!isServerRunning){
             startServer()
         }
-        else{
-            if (isGroupOwner) {
-                serverScope.launch {
-                    messageServer.sendImage(file)
-                    activeFoto = file
-                    Log.d("MESSAGE-SERVER", "Image Sent")
-                }
-            } else {
-                clientScope.launch {
-                    messageClient.sendImage(file)
-                    Log.d("MESSAGE-CLIENT", "Sent")
-                }
-            }
-        }
-    }
 
-    fun sendInfo(phone: Phone){
-        Log.d("SEND-TEXT", "Call")
-        if(!isServerRunning){
-            startServer()
-        }
-        else{
-            if (isGroupOwner) {
-                serverScope.launch {
-                    //messageServer.sendPhoneInfo(phone)
-                    Log.d("MESSAGE-SERVER", "Sending...")
-                }
-            } else {
-                clientScope.launch {
-                    messageClient.sendPhoneInfo(phone)
-                    Log.d("MESSAGE-CLIENT", "Sent")
-                }
+        if (isGroupOwner) {
+            serverScope.launch {
+                messageServer.sendImage(file)
+                activePhoto = file
+                Log.d("MESSAGE-SERVER", "Image Sent")
+            }
+        } else {
+            clientScope.launch {
+                messageClient.sendImage(file)
+                activePhoto = file
+                Log.d("MESSAGE-CLIENT", "Image Sent")
             }
         }
     }
 
     fun startServer(){
 
-        if(!isServerRunning && isGroupOwner && isConnected){
+        if(!isServerRunning && isConnected && isGroupOwner){
             startMessageServer()
-
-            //virtualScreen.addHost(thisPhone)
         }
         else if (!isServerRunning && isConnected){
             startMessageClient()
@@ -167,8 +142,7 @@ class SharedViewModel() : ViewModel() {
 
         messageServer = MessageServer(thisPhone) { message ->
             // Handle the received message
-            Log.d("MESSAGE", "Received: $message")
-            text = message;
+
             parseMessageFromClient(message)
         }
 
@@ -186,7 +160,6 @@ class SharedViewModel() : ViewModel() {
                 { message ->
                 // Handle the received message
                 Log.d("MESSAGE", "Received: $message")
-                text = message;
 
                 parseMessageFromServer(message)
 
@@ -197,7 +170,7 @@ class SharedViewModel() : ViewModel() {
 
                     imageUri = Uri.fromFile(file)
 
-                    activeFoto = file
+                    activePhoto = file
 
                     processReceivedImage(file)
 
@@ -205,36 +178,35 @@ class SharedViewModel() : ViewModel() {
 
 
             messageClient.start()
-        }, 1000)
+        }, 500)
     }
 
     private fun parseMessageFromServer(message: String){
         var type = message.split("*")[0]
         var info = message.split("*")[1]
 
-        if(type.equals("PhoneInfo")){
+        when(type){
+            "PhoneInfo" -> {
+                thisPhone = Json.decodeFromString<Phone>(info)
+                Log.d("MESSAGE", "Saved PhoneInfo")
+            }
+            "ScreenInfo" -> {
+                virtualScreen = Json.decodeFromString<VirtualScreen>(info)
 
-            thisPhone = Json.decodeFromString<Phone>(info)
+                activePhoto?.let { processReceivedImage(it) }
 
-            Log.d("MESSAGE", "Saved PhoneInfo")
-        }
-        else if(type.equals("ScreenInfo")){
-
-            virtualScreen = Json.decodeFromString<VirtualScreen>(info)
-
-            activeFoto?.let { processReceivedImage(it) }
-
-            Log.d("MESSAGE", "Saved ScreenInfo")
+                Log.d("MESSAGE", "Saved ScreenInfo")
+            }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun parseMessageFromClient(message: String){
 
         var swipe = Json.decodeFromString<Swipe>(message)
 
         Log.d("SWIPE-RECEIVED", swipe.toString())
-        var phoneAdded = false
+
+        var phoneAdded: Boolean
 
         if(swipe.type == SwipeType.DISCONNECT){
             var removedPhone = swipe.phone
@@ -245,25 +217,21 @@ class SharedViewModel() : ViewModel() {
             messageServer.sendClientInfo(removedPhone)
 
             var tempScreen = VirtualScreen()
-            tempScreen.vHeight = removedPhone.height
-            tempScreen.vWidth = removedPhone.width
+            tempScreen.height = removedPhone.height
+            tempScreen.width = removedPhone.width
 
             messageServer.sendScreenInfo(tempScreen, removedPhone)
         }
-
-        phoneAdded = virtualScreen.addSwipe(swipe) {
-                phone ->
-            thisPhone = phone
-            activeFoto?.let { processReceivedImage(it) }
+        else if(swipe.type == SwipeType.CONNECT){
+            phoneAdded = virtualScreen.addSwipe(swipe) {
+                    hostUpdated ->
+                thisPhone = hostUpdated
+                activePhoto?.let { processReceivedImage(it) }
+            }
+            if(phoneAdded){
+                messageServer.updateClientInfo(virtualScreen)
+            }
         }
-
-        if(phoneAdded){
-            Thread.sleep(25)
-            messageServer.updateClientInfo(virtualScreen)
-            //Thread.sleep(25)
-            //messageServer.sendScreenInfo(virtualScreen)
-        }
-
     }
 
     fun processReceivedImage(file: File) {
@@ -298,7 +266,7 @@ class SharedViewModel() : ViewModel() {
             Log.d("Bitmap height rotated", bitmap.height.toString())
             Log.d("Bitmap width rotated", bitmap.width.toString())
 
-            position = thisPhone.position.rotateWithScreen(Position(virtualScreen.vWidth, virtualScreen.vHeight), thisPhone)
+            position = thisPhone.position.rotateWithScreen(Position(virtualScreen.width, virtualScreen.height), thisPhone)
             Log.d("Phone X rotated", position.x.toString())
             Log.d("Phone Y rotated", position.y.toString())
         }
@@ -326,25 +294,20 @@ class SharedViewModel() : ViewModel() {
         }
     }
 
-    fun upscaleAndCropBitmap(file: File): Bitmap {
+    private fun upscaleAndCropBitmap(file: File): Bitmap {
 
-        //Scales and crops image to virtual screen size
+        // Scales and crops image to virtual screen size
 
         var bitmap = BitmapFactory.decodeFile(file.path)
-
-        val ratio = thisPhone.DPI.toDouble()/virtualScreen.DPI.toDouble()
 
         Log.d("Bitmap height",  bitmap.height.toString())
         Log.d("Bitmap width", bitmap.width.toString())
 
-        val widthRatio = virtualScreen.vWidth.toFloat() / bitmap.width
-        val heightRatio = virtualScreen.vHeight.toFloat() / bitmap.height
+        val widthRatio = virtualScreen.width.toFloat() / bitmap.width
+        val heightRatio = virtualScreen.height.toFloat() / bitmap.height
         val scaleFactor = if (widthRatio > heightRatio) widthRatio else heightRatio
 
         Log.d("Scale", scaleFactor.toString())
-
-//        val scaledWidth = (bitmap.width * scaleFactor * ratio).toInt() + 2
-//        val scaledHeight = (bitmap.height * scaleFactor * ratio).toInt() + 2
 
         val scaledWidth = (bitmap.width * scaleFactor).toInt() + 2
         val scaledHeight = (bitmap.height * scaleFactor).toInt() + 2
@@ -354,17 +317,17 @@ class SharedViewModel() : ViewModel() {
         Log.d("Bitmap height scaled",  bitmap.height.toString())
         Log.d("Bitmap width scaled", bitmap.width.toString())
 
-        Log.d("Screen height",  virtualScreen.vHeight.toString())
-        Log.d("Screen width", virtualScreen.vWidth.toString())
+        Log.d("Screen height",  virtualScreen.height.toString())
+        Log.d("Screen width", virtualScreen.width.toString())
 
-        val heightDiff = ((bitmap.height - virtualScreen.vHeight) / 2F).roundToInt()
-        val widthDiff = ((bitmap.width - virtualScreen.vWidth) / 2F).roundToInt()
+        val heightDiff = ((bitmap.height - virtualScreen.height) / 2F).roundToInt()
+        val widthDiff = ((bitmap.width - virtualScreen.width) / 2F).roundToInt()
 
         Log.d("height diff",  heightDiff.toString())
         Log.d("width diff", widthDiff.toString())
 
         // Crop the bitmap
-        return Bitmap.createBitmap(bitmap, widthDiff, heightDiff, virtualScreen.vWidth, virtualScreen.vHeight)
+        return Bitmap.createBitmap(bitmap, widthDiff, heightDiff, virtualScreen.width, virtualScreen.height)
     }
 
 }

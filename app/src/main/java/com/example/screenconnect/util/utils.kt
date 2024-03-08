@@ -17,6 +17,7 @@ import android.view.WindowManager
 import androidx.annotation.RequiresApi
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.example.screenconnect.models.Phone
 import kotlin.system.exitProcess
 
 @RequiresApi(Build.VERSION_CODES.R)
@@ -31,7 +32,16 @@ fun getPhoneInfo(context: Context, windowManager: WindowManager): com.example.sc
     val xDPI = displayMetrics.xdpi.toInt()
     val yDPI = displayMetrics.ydpi.toInt()
 
-    val DPI = (xDPI+yDPI)/2
+    val testDPI = displayMetrics.densityDpi
+
+    Log.d("DPI density", displayMetrics.density.toString())
+
+    Log.d("DPI test", testDPI.toString())
+
+    Log.d("DPI X", xDPI.toString())
+    Log.d("DPI Y", yDPI.toString())
+
+    val DPI = yDPI //(xDPI+yDPI)/2
 
     Log.d("DPI", DPI.toString())
 
@@ -39,7 +49,9 @@ fun getPhoneInfo(context: Context, windowManager: WindowManager): com.example.sc
 
     val id = name + (0..100).random()
 
-    return com.example.screenconnect.models.Phone(height, width, DPI, name, id)
+    var phone = Phone(height, width, DPI, name, id)
+
+    return phone
 }
 
 fun wifiPopup(context: Context){

@@ -74,7 +74,6 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
 
-
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
         if (Build.VERSION.SDK_INT < 30) {
@@ -126,49 +125,12 @@ class MainActivity : ComponentActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        var topAdded by mutableStateOf(false)
-
-        var bottomAdded by mutableStateOf(false)
-
-        var topValues by  mutableFloatStateOf(0F)
-        var bottomValues by  mutableIntStateOf(0)
-        var bottomValuesT by  mutableFloatStateOf(0F)
-
         sharedViewModel.thisPhone = getPhoneInfo(this, windowManager)
 
-        sharedViewModel.virtualScreen.addFirst(sharedViewModel.thisPhone)
+        sharedViewModel.virtualScreen.addFirstPhone(sharedViewModel.thisPhone)
 
-//        val displayMetrics = resources.displayMetrics
-//
-//        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-//
-//        Log.d("TEST DISPLAY HEIGHT", displayMetrics.heightPixels.toString())
 
         setContent {
-//            if (Build.VERSION.SDK_INT < 30) {
-//                WindowCompat.getInsetsController(window, window.decorView)
-//                    .hide(WindowInsetsCompat.Type.systemBars())
-//            }
-
-//            topValues = WindowInsets.systemBars.asPaddingValues().calculateTopPadding().value * Density(this).density
-//
-//            bottomValuesT = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding().value * Density(this).density
-//
-//            bottomValues = WindowInsets.systemBars.getBottom(Density(this))
-//
-//
-//            if(!topAdded && topValues > 0){
-//                Log.d("PADDING VALUES ADDING TOP", topValues.toString())
-//                sharedViewModel.thisPhone.addToHeight(topValues.toInt())
-//                topAdded = true
-//            }
-//
-//            if(!bottomAdded && (bottomValues > 0 || bottomValuesT > 0)){
-//                Log.d("PADDING VALUES ADDING BOTTOM Y", bottomValuesT.toString())
-//                Log.d("PADDING VALUES ADDING BOTTOM", bottomValues.toString())
-//                sharedViewModel.thisPhone.addToHeight(bottomValues.toInt())
-//                bottomAdded = true
-//            }
 
             Box(modifier = Modifier
                 .fillMaxWidth()
@@ -252,30 +214,7 @@ class MainActivity : ComponentActivity() {
 //                systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 //            }
 //        }
-    //}
-
-//    @RequiresApi(30)
-//    fun getPhoneInfo(context: Context): com.example.screenconnect.models.Phone {
-//
-//        val displayMetrics = context.resources.displayMetrics
-//
-//
-//
-//        val height = displayMetrics.heightPixels //+ statusBarHeight + navigationBarHeight
-//        val width = displayMetrics.widthPixels
-//        val xDPI = displayMetrics.xdpi.toInt()
-//        val yDPI = displayMetrics.ydpi.toInt()
-//
-//        val DPI = (xDPI+yDPI)/2
-//
-//        Log.d("DPI", DPI.toString())
-//
-//        val name = Build.MANUFACTURER + " " + Build.MODEL;
-//
-//        val id = name + (0..100).random()
-//
-//        return com.example.screenconnect.models.Phone(height, width, DPI, name, id)
-//    }
+// }
 
 }
 
