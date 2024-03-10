@@ -52,8 +52,6 @@ android {
 
 dependencies {
 
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0-RC")
-
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
     implementation ("com.google.dagger:hilt-android:2.50")
@@ -78,4 +76,7 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    implementation(project(":screen-connect"))
+
 }

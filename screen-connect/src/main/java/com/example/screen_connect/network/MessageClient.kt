@@ -1,11 +1,9 @@
-package com.example.screenconnect.network
+package com.example.screen_connect.network
 
-import android.os.Build
 import android.os.Environment
 import android.util.Log
-import com.example.screenconnect.models.Phone
-import com.example.screenconnect.models.Swipe
-import com.example.screenconnect.screens.SharedViewModel
+import com.example.screen_connect.models.Phone
+import com.example.screen_connect.models.Swipe
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedInputStream

@@ -1,30 +1,15 @@
-package com.example.screenconnect.network
+package com.example.screen_connect.network
 
-import android.os.Environment
-import android.util.Log
-import com.example.screenconnect.models.Phone
-import com.example.screenconnect.models.VirtualScreen
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
-import java.io.DataInputStream
-import java.io.DataOutputStream
+import com.example.screen_connect.models.Phone
+import com.example.screen_connect.models.VirtualScreen
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
 import java.net.ServerSocket
-import java.net.Socket
 
 class MessageServer (
     private val thisPhone: Phone,
     private val messageReceivedCallback: (String) -> Unit
-    ) : Thread(), MessageReceivedListener{
+    ) : Thread(), MessageReceivedListener {
 
     private val connectLimit = 10
     private val socketThreads = mutableListOf<SocketThread>()

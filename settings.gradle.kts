@@ -15,4 +15,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Screen Connect"
 include(":app")
+include(":screen-connect")
  

@@ -1,4 +1,4 @@
-package com.example.screenconnect.screens
+package com.example.screen_connect.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -13,12 +13,12 @@ import androidx.compose.runtime.setValue
 import androidx.core.graphics.scale
 import androidx.lifecycle.ViewModel
 import com.example.screenconnect.enums.SwipeType
-import com.example.screenconnect.models.Phone
-import com.example.screenconnect.models.Position
-import com.example.screenconnect.models.Swipe
-import com.example.screenconnect.models.VirtualScreen
-import com.example.screenconnect.network.MessageClient
-import com.example.screenconnect.network.MessageServer
+import com.example.screen_connect.models.Phone
+import com.example.screen_connect.models.Position
+import com.example.screen_connect.models.Swipe
+import com.example.screen_connect.models.VirtualScreen
+import com.example.screen_connect.network.MessageClient
+import com.example.screen_connect.network.MessageServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

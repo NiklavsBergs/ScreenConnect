@@ -1,4 +1,4 @@
-package com.example.screenconnect.models
+package com.example.screen_connect.models
 
 import android.util.Log
 import com.example.screenconnect.enums.Edge
@@ -211,7 +211,7 @@ class VirtualScreen {
         return 0
     }
 
-    private fun getBPositionAndUpdateScreen(swipeA: Swipe, swipeB: Swipe, phoneB: Phone): Position{
+    private fun getBPositionAndUpdateScreen(swipeA: Swipe, swipeB: Swipe, phoneB: Phone): Position {
 
         val centerA = Position(swipeA.phone.width / 2, swipeA.phone.height / 2)
         val centerB = Position(swipeB.phone.width / 2, swipeB.phone.height / 2)
@@ -381,7 +381,7 @@ class VirtualScreen {
         return false
     }
 
-    private fun getPhoneInScreen(phoneObj: Phone):Phone{
+    private fun getPhoneInScreen(phoneObj: Phone): Phone {
         for(phone in phones){
             if(phone.id == phoneObj.id){
                 return phone

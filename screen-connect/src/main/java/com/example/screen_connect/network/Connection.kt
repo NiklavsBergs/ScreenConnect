@@ -1,4 +1,4 @@
-package com.example.screenconnect.network
+package com.example.screen_connect.network
 
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
@@ -12,8 +12,8 @@ import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import com.example.screenconnect.MainActivity
-import com.example.screenconnect.screens.SharedViewModel
+import com.example.screen_connect.screens.SharedViewModel
+import com.example.screen_connect.network.WiFiDirectBroadcastReceiver
 
 
 class Connection(val context: Context, val sharedViewModel: SharedViewModel) {

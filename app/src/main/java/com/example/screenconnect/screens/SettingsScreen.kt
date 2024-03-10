@@ -1,54 +1,42 @@
 package com.example.screenconnect.screens
 
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.screenconnect.components.statusBar
-import com.example.screenconnect.models.Swipe
-import com.example.screenconnect.network.Connection
-import com.example.screenconnect.util.getPhoneInfo
-import com.example.screenconnect.util.getRealPathFromUri
-import com.example.screenconnect.util.isLocationEnabled
-import com.example.screenconnect.util.locationPopup
-import com.example.screenconnect.util.wifiPopup
-import com.google.accompanist.systemuicontroller.SystemUiController
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.example.screen_connect.models.Swipe
+import com.example.screen_connect.network.Connection
+import com.example.screen_connect.util.getRealPathFromUri
+import com.example.screen_connect.util.isLocationEnabled
+import com.example.screen_connect.util.locationPopup
+import com.example.screen_connect.util.wifiPopup
+import com.example.screen_connect.screens.SharedViewModel
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewModel, connection: Connection) {
 
@@ -67,11 +55,6 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
     val initialPosition = remember { mutableStateOf(Offset.Zero) }
     val endPosition = remember { mutableStateOf(Offset.Zero) }
     var isDragging = false
-
-//    val systemUiController: SystemUiController = rememberSystemUiController()
-//    systemUiController.isStatusBarVisible = false // Status bar
-//    systemUiController.isNavigationBarVisible = false // Navigation bar
-
 
     Column(modifier = Modifier
         .fillMaxSize()
@@ -203,6 +186,10 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                         .align(alignment = Alignment.CenterHorizontally)
                 ) {
                     Text(text = "Discover Peers")
+                }
+                
+                Button(onClick = { connection.makeGroup() }) {
+                    Text(text = "Make screen")
                 }
 
                 sharedViewModel.peerList?.let { peers ->

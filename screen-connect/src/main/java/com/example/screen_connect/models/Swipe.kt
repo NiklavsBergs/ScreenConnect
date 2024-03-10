@@ -1,4 +1,4 @@
-package com.example.screenconnect.models
+package com.example.screen_connect.models
 
 import android.os.Build
 import android.util.Log
@@ -19,7 +19,6 @@ import java.time.LocalTime
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Serializable
 class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Serializable(with = OffsetSerializer::class) val end: Offset, val phone: Phone) {
 
