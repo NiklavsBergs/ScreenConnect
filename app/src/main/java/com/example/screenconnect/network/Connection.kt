@@ -89,7 +89,6 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
 
             override fun onFailure(reasonCode: Int) {
                 sharedViewModel.infoText = "Discovery failed"
-                Log.d("DISCOVERY", "Fail")
                 Log.d("DISCOVERY-ERROR", reasonCode.toString())
                 sharedViewModel.isDiscovering = false
             }
@@ -148,11 +147,9 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
         if(sharedViewModel.isConnected) {
             Log.d("DISCONNECT", "start")
             if (manager != null && channel != null) {
-                Log.d("DISCONNECT", "1")
                 manager!!.requestGroupInfo(channel,
                     WifiP2pManager.GroupInfoListener { group ->
                         if (group != null && manager != null && channel != null) {
-                            Log.d("DISCONNECT", "2")
                             manager!!.removeGroup(channel, object : WifiP2pManager.ActionListener {
                                 override fun onSuccess() {
                                     Log.d("DISCONNECT", "removeGroup onSuccess -")

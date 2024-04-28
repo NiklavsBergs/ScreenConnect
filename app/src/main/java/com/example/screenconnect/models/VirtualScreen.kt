@@ -225,7 +225,7 @@ class VirtualScreen {
         Log.d("A Con p", swipeAPos.toString())
         Log.d("B Con p", swipeBPos.toString())
 
-        // Center devices
+        // Center devices(FIX THIS FUNCTION TO NOD DIVIDE BY 2)
         var changeCenter = centerB.centerBy(centerA)
 
         var change = changeCenter

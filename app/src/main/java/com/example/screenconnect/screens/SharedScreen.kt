@@ -13,8 +13,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.navigation.NavController
-import com.example.screen_connect.models.Swipe
-import com.example.screen_connect.screens.SharedViewModel
+import com.example.screenconnect.models.Swipe
+import com.example.screenconnect.screens.SharedViewModel
 
 @Composable
 fun SharedScreen(navController: NavController, sharedViewModel: SharedViewModel) {

@@ -31,15 +31,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.example.screen_connect.network.Connection
-import com.example.screen_connect.screens.SharedViewModel
-//import com.example.screenconnect.network.Connection
-import com.example.screen_connect.network.LocationBroadcastReceiver
-//import com.example.screenconnect.screens.SharedViewModel
-import com.example.screen_connect.util.getPhoneInfo
-import com.example.screen_connect.util.locationPopup
-import com.example.screen_connect.util.isLocationEnabled
-import com.example.screen_connect.util.wifiPopup
+import com.example.screenconnect.network.Connection
+import com.example.screenconnect.screens.SharedViewModel
+import com.example.screenconnect.network.LocationBroadcastReceiver
+import com.example.screenconnect.util.getPhoneInfo
+import com.example.screenconnect.util.locationPopup
+import com.example.screenconnect.util.isLocationEnabled
+import com.example.screenconnect.util.wifiPopup
 
 
 class MainActivity : ComponentActivity() {

@@ -32,10 +32,9 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
 
     var type: SwipeType = SwipeType.NONE
 
-    private val BORDER_HOR = phone.height / 5
-    private val BORDER_VERT = phone.width / 5
-
-    private val MIN_SWIPE = 10
+    val BORDER_HOR = phone.DPI * 0.4
+    val BORDER_VERT = phone.DPI * 0.4
+    val MIN_SWIPE = 50
 
     init {
         if(connectionPoint.x == -1){

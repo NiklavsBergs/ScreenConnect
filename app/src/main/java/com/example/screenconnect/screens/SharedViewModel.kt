@@ -223,8 +223,7 @@ class SharedViewModel() : ViewModel() {
             messageServer.sendScreenInfo(tempScreen, removedPhone)
         }
         else if(swipe.type == SwipeType.CONNECT){
-            phoneAdded = virtualScreen.addSwipe(swipe) {
-                    hostUpdated ->
+            phoneAdded = virtualScreen.addSwipe(swipe) { hostUpdated ->
                 thisPhone = hostUpdated
                 activePhoto?.let { processReceivedImage(it) }
             }

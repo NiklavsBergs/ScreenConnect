@@ -27,13 +27,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.screenconnect.components.statusBar
-import com.example.screen_connect.models.Swipe
-import com.example.screen_connect.network.Connection
-import com.example.screen_connect.util.getRealPathFromUri
-import com.example.screen_connect.util.isLocationEnabled
-import com.example.screen_connect.util.locationPopup
-import com.example.screen_connect.util.wifiPopup
-import com.example.screen_connect.screens.SharedViewModel
+import com.example.screenconnect.models.Swipe
+import com.example.screenconnect.network.Connection
+import com.example.screenconnect.util.getRealPathFromUri
+import com.example.screenconnect.util.isLocationEnabled
+import com.example.screenconnect.util.locationPopup
+import com.example.screenconnect.util.wifiPopup
+import com.example.screenconnect.screens.SharedViewModel
 import java.io.File
 
 @RequiresApi(Build.VERSION_CODES.Q)
