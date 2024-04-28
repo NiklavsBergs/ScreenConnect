@@ -120,27 +120,6 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
             })
         }
     }
-    @RequiresApi(Build.VERSION_CODES.Q)
-    @SuppressLint("MissingPermission")
-    fun makeGroup(){
-
-        channel?.also {
-            manager?.createGroup(channel!!, object : WifiP2pManager.ActionListener {
-                override fun onSuccess() {
-                    // Device is ready to accept incoming connections from peers.
-                }
-
-                override fun onFailure(reason: Int) {
-                    Toast.makeText(
-                        context,
-                        "P2P group creation failed. Retry.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            })
-        }
-
-    }
 
     @SuppressLint("MissingPermission")
     fun disconnect() {

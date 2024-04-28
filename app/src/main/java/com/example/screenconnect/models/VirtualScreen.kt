@@ -59,7 +59,7 @@ class VirtualScreen {
                 }
             }
 
-            if(phones.size == 1){ //if(phones.size == 1 && phones[0].isHost){
+            if(phones.size == 1){
                 resetScreen()
             }
             else if(phones.size == 2 && isInScreen(swipes[0].phone) && isInScreen(swipes[1].phone)){
@@ -122,7 +122,6 @@ class VirtualScreen {
         if(DPI>phoneB.DPI){
             DPI = phoneB.DPI
         }
-
     }
 
     fun removePhone(phone: Phone){
@@ -156,13 +155,12 @@ class VirtualScreen {
                 width = tempWidth
             }
             if(tempHeight > height){
-                height= tempHeight
+                height = tempHeight
             }
         }
     }
 
     fun addFirstPhone(phone: Phone){
-
         phone.position = Position(0, 0)
         phone.rotation = 0
         phones.add(phone)
@@ -222,13 +220,11 @@ class VirtualScreen {
         val swipeAPos = swipeA.connectionPoint
         val swipeBPos = swipeB.connectionPoint
 
-        Log.d("A Con p", swipeAPos.toString())
-        Log.d("B Con p", swipeBPos.toString())
+        Log.d("A Con point", swipeAPos.toString())
+        Log.d("B Con point", swipeBPos.toString())
 
-        // Center devices(FIX THIS FUNCTION TO NOD DIVIDE BY 2)
-        var changeCenter = centerB.centerBy(centerA)
-
-        var change = changeCenter
+        // Center devices
+        var change = centerB.centerBy(centerA)
 
         Log.d("Change + Center", change.toString())
 
@@ -239,7 +235,6 @@ class VirtualScreen {
         Log.d("Change B", changeB.toString())
 
         change += changeA
-        Log.d("Change + ChangeA", change.toString())
 
         // ADD GAP
         when(swipeB.edge){
@@ -250,15 +245,8 @@ class VirtualScreen {
             Edge.NONE -> {}
         }
 
-        Log.d("ChangeB with GAP", changeB.toString())
-
-        var isLandscape = false
-
         // Relative rotation
         val rotation = phoneB.rotation - swipeA.phone.rotation
-
-        Log.d("Rotation", rotation.toString())
-
 
         if(abs(rotation) == 90){
 
@@ -269,16 +257,11 @@ class VirtualScreen {
             changeB = changeB.rotate(rotation)
 
             Log.d("ChangeB after ROT", changeB.toString())
-
-            isLandscape = true
         }
         else if(abs(rotation) == 180){
             changeB = changeB.rotate(rotation)
             Log.d("ChangeB after ROT", changeB.toString())
         }
-
-        // Check if needed
-        changeB += changeCenter
 
         change += changeB
 
@@ -287,11 +270,10 @@ class VirtualScreen {
         var posA = swipeA.phone.position
         Log.d("PhoneA", posA.toString())
 
-        // B position relative to A
+        // Get phone B position in screen
         var posB = Position(posA.x + change.x, posA.y + change.y)
 
         Log.d("PhoneB", posB.toString())
-        Log.d("PhoneB isLandscape", isLandscape.toString())
 
         updateScreen(posB, phoneB)
 

@@ -40,13 +40,8 @@ class Position(var x: Int, var y: Int) {
 
     fun centerBy(center: Position): Position{
 
-        return Position((center.x - this.x)/2, (center.y - this.y)/2)
+        return Position((center.x - this.x), (center.y - this.y))
     }
-
-    fun addGap(posB: Position, phoneB: Phone, swipeB: Swipe){
-
-    }
-
 
     override fun toString(): String {
 

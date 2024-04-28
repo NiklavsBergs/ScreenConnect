@@ -187,10 +187,6 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                 ) {
                     Text(text = "Discover Peers")
                 }
-                
-                Button(onClick = { connection.makeGroup() }) {
-                    Text(text = "Make screen")
-                }
 
                 sharedViewModel.peerList?.let { peers ->
                     LazyColumn {
