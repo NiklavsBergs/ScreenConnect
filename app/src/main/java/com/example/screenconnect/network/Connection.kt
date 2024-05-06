@@ -29,7 +29,6 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
         context.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
     }
 
-
     var channel: WifiP2pManager.Channel? = null
     var receiver: BroadcastReceiver? = null
     var peerListListener: WifiP2pManager.PeerListListener? = null
@@ -78,81 +77,93 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
 
     @SuppressLint("MissingPermission")
     fun startPeerDiscovery() {
-        Log.d("DISCOVERY", "Start")
+        val tempManager = manager
 
-        manager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
+        if (tempManager == null) {
+            return
+        }
+
+        tempManager.discoverPeers(channel, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 sharedViewModel.infoText = "Discovery started"
-                Log.d("DISCOVERY", "Success")
                 sharedViewModel.isDiscovering = false
+                Log.d("DISCOVERY", "Success")
             }
 
             override fun onFailure(reasonCode: Int) {
                 sharedViewModel.infoText = "Discovery failed"
-                Log.d("DISCOVERY-ERROR", reasonCode.toString())
                 sharedViewModel.isDiscovering = false
+                Log.d("DISCOVERY-ERROR", reasonCode.toString())
             }
         })
     }
 
     @SuppressLint("MissingPermission")
     fun connectToPeer(device: WifiP2pDevice) {
+
+        val tempManager = manager
+
+        if (tempManager == null) {
+            return
+        }
+
         // Create a WifiP2pConfig object with the device address
         val config = WifiP2pConfig()
         config.deviceAddress = device.deviceAddress
 
-        var name = device.deviceName
+        val name = device.deviceName
 
-        // Check if there is an active connection, disconnect if needed
-        channel?.also { channel ->
-            manager?.connect(channel, config, object : WifiP2pManager.ActionListener {
-                override fun onSuccess() {
-                    Log.d("CONNECT", "Connected to : $name")
-                }
+        tempManager.connect(channel, config, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() {
+                Log.d("CONNECT", "Connected to : $name")
+            }
 
-                override fun onFailure(reason: Int) {
-                    // Handle connection failure
-                    sharedViewModel.isConnected = false
-                    sharedViewModel.connectedDeviceName = ""
+            override fun onFailure(reason: Int) {
+                // Handle connection failure
+                sharedViewModel.isConnected = false
+                sharedViewModel.connectedDeviceName = ""
 
-                    Log.d("CONNECT", "Connection initiation failed: $reason")
-                }
-            })
-        }
+                Log.d("CONNECTION-ERROR", reason.toString())
+            }
+        })
     }
 
     @SuppressLint("MissingPermission")
     fun disconnect() {
+
+        val tempManager = manager
+
+        if (tempManager == null) {
+            return
+        }
+
         if(sharedViewModel.isConnected) {
             Log.d("DISCONNECT", "start")
-            if (manager != null && channel != null) {
-                manager!!.requestGroupInfo(channel,
-                    WifiP2pManager.GroupInfoListener { group ->
-                        if (group != null && manager != null && channel != null) {
-                            manager!!.removeGroup(channel, object : WifiP2pManager.ActionListener {
-                                override fun onSuccess() {
-                                    Log.d("DISCONNECT", "removeGroup onSuccess -")
-                                }
 
-                                override fun onFailure(reason: Int) {
-                                    Log.d("DISCONNECT", "removeGroup onFailure -$reason")
-                                }
-                            })
+            tempManager.requestGroupInfo(channel,
+                WifiP2pManager.GroupInfoListener { group ->
+                    tempManager.removeGroup(channel, object : WifiP2pManager.ActionListener {
+                        override fun onSuccess() {
+                            Log.d("DISCONNECT", "Success")
+                        }
+
+                        override fun onFailure(reason: Int) {
+                            Log.d("DISCONNECT-ERROR", reason.toString())
                         }
                     })
+                })
 
-                if (sharedViewModel.isGroupOwner) {
-                    sharedViewModel.messageServer.close()
-                    Log.d("DISCONNECT", "Server closed")
-                } else {
-                    sharedViewModel.messageClient.close()
-                    Log.d("DISCONNECT", "Client closed")
-                }
-
-                sharedViewModel.isGroupOwner = false
-                sharedViewModel.isConnected = false
-                sharedViewModel.isServerRunning = false
+            if (sharedViewModel.isGroupOwner) {
+                sharedViewModel.messageServer.close()
+                Log.d("DISCONNECT", "Server closed")
+            } else {
+                sharedViewModel.messageClient.close()
+                Log.d("DISCONNECT", "Client closed")
             }
+
+            sharedViewModel.isGroupOwner = false
+            sharedViewModel.isConnected = false
+            sharedViewModel.isServerRunning = false
         }
     }
 

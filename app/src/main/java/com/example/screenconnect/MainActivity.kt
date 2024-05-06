@@ -49,10 +49,7 @@ class MainActivity : ComponentActivity() {
 
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
-        if (Build.VERSION.SDK_INT < 30) {
-
-        }
-        else{
+        if (Build.VERSION.SDK_INT > 30) {
             enableEdgeToEdge()
 
             insetsController.apply {

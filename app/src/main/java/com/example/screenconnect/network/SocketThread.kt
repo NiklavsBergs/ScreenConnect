@@ -24,8 +24,6 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
     private val input = DataInputStream(BufferedInputStream(socket.getInputStream()))
     private val output = DataOutputStream(BufferedOutputStream(socket.getOutputStream()))
 
-    private val receivedOnce = false
-
     override fun run() {
         try {
             while (!socket.isClosed) {
@@ -35,7 +33,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
                     Log.d("SERVER-RECEIVE","Receiving info")
                     val message = input.readUTF()
 
-                    if(!receivedOnce){
+                    if(phoneId == ""){
                         var swipe = Json.decodeFromString<Swipe>(message)
                         phoneId = swipe.phone.id
                     }

@@ -286,7 +286,7 @@ class SharedViewModel() : ViewModel() {
 
         // Scales and crops image to virtual screen size
 
-        // Get image size
+        // Get image size without decoding the whole image
         val options = BitmapFactory.Options()
         options.inJustDecodeBounds = true
 
@@ -294,6 +294,7 @@ class SharedViewModel() : ViewModel() {
         BitmapFactory.decodeStream(fis, null, options)
         fis.close()
 
+        // Get scale factor needed to scale image to screen size
         val widthRatio = virtualScreen.width.toFloat() / options.outWidth
         val heightRatio = virtualScreen.height.toFloat() / options.outHeight
         val scaleFactor = if (widthRatio > heightRatio) widthRatio else heightRatio

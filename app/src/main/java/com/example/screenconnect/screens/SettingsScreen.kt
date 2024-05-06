@@ -140,25 +140,11 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
 
         statusBar(sharedViewModel.infoText)
 
-        //Text(text = sharedViewModel.infoText)
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-
-//            if (sharedViewModel.isGroupOwner && sharedViewModel.isConnected) {
-//                Text(
-//                    text = "Host",
-//                    modifier = Modifier.padding(top = 16.dp)
-//                )
-//            } else {
-//                Text(
-//                    text = if (sharedViewModel.isConnected) "Connected to: ${sharedViewModel.connectedDeviceName}" else "Not connected",
-//                    modifier = Modifier.padding(top = 16.dp)
-//                )
-//            }
 
             if (!sharedViewModel.isConnected) {
                 Button(

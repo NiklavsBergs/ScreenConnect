@@ -24,7 +24,6 @@ import kotlin.system.exitProcess
 fun getPhoneInfo(context: Context, windowManager: WindowManager): com.example.screenconnect.models.Phone {
 
     val displayMetrics = context.resources.displayMetrics
-
     windowManager.defaultDisplay.getRealMetrics(displayMetrics)
 
     val height = displayMetrics.heightPixels
@@ -40,6 +39,7 @@ fun getPhoneInfo(context: Context, windowManager: WindowManager): com.example.sc
 
     Log.d("DPI X", xDPI.toString())
     Log.d("DPI Y", yDPI.toString())
+    Log.d("DPI Y/X", ((xDPI+yDPI)/2).toString())
 
     val DPI = yDPI //(xDPI+yDPI)/2
 
@@ -47,7 +47,7 @@ fun getPhoneInfo(context: Context, windowManager: WindowManager): com.example.sc
 
     val name = Build.MANUFACTURER + " " + Build.MODEL;
 
-    val id = name + (0..100).random()
+    val id = name + (0..1000).random()
 
     var phone = Phone(height, width, DPI, name, id)
 

@@ -14,15 +14,11 @@ class Position(var x: Int, var y: Int) {
         return Position(this.x + position.x, this.y + position.y)
     }
 
-//    fun flip(): Position{
-//        return Position(this.y, this.x)
-//    }
-
     fun rotate(rotation: Int): Position{
         when(rotation){
-            90 -> return(Position(-this.y, x))
-            -90 -> return(Position(y, -this.x))
-            180 -> return(Position(-1*this.x, -1*this.y))
+            90 -> return(Position(-this.y, this.x))
+            -90 -> return(Position(this.y, -this.x))
+            180 -> return(Position(-this.x, -this.y))
         }
 
         return this

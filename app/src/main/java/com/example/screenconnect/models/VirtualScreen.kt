@@ -226,7 +226,7 @@ class VirtualScreen {
         // Center devices
         var change = centerB.centerBy(centerA)
 
-        Log.d("Change + Center", change.toString())
+        Log.d("Centered", change.toString())
 
         var changeA = Position(swipeAPos.x - centerA.x, swipeAPos.y - centerA.y)
         var changeB = Position(centerB.x - swipeBPos.x, centerB.y - swipeBPos.y)
@@ -234,7 +234,9 @@ class VirtualScreen {
         Log.d("Change A", changeA.toString())
         Log.d("Change B", changeB.toString())
 
+        // Center of phone B is positioned on the connection point of phone A
         change += changeA
+        Log.d("Change with A", change.toString())
 
         // ADD GAP
         when(swipeB.edge){
@@ -245,17 +247,18 @@ class VirtualScreen {
             Edge.NONE -> {}
         }
 
-        // Relative rotation
+        // Relative rotation between phones
         val rotation = phoneB.rotation - swipeA.phone.rotation
 
         if(abs(rotation) == 90){
 
+            // Adjust position with rotation
             change.x = change.x - (centerB.y - centerB.x)
             change.y = change.y + (centerB.y - centerB.x)
             Log.d("Change after ROT", change.toString())
 
+            // Adjust B change with rotation
             changeB = changeB.rotate(rotation)
-
             Log.d("ChangeB after ROT", changeB.toString())
         }
         else if(abs(rotation) == 180){
@@ -263,6 +266,7 @@ class VirtualScreen {
             Log.d("ChangeB after ROT", changeB.toString())
         }
 
+        // Phone B position relative to phone A
         change += changeB
 
         Log.d("Change TOGETHER", change.toString())
