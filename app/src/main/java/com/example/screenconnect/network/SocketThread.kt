@@ -18,7 +18,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.net.Socket
 
-class SocketThread(private val socket: Socket, private val messageReceivedListener: MessageReceivedListener?) : Thread() {
+class SocketThread(private val socket: Socket, private val messageReceivedListener: MessageReceivedListener) : Thread() {
 
     var phoneId = ""
 
@@ -40,7 +40,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
                         phoneId = swipe.phone.id
                     }
 
-                    messageReceivedListener?.onMessageReceived(message)
+                    messageReceivedListener.onMessageReceived(message)
                 }
                 else if (messageType == MessageType.IMAGE){
                     Log.d("SERVER-RECEIVE","Receiving image")
@@ -89,9 +89,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         try{
             output.writeInt(MessageType.INFO.ordinal)
 
-            //var screenInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth + "," + screen.DPI
             var screenInfo = "ScreenInfo*" + Json.encodeToString(screen)
-            //var screenInfo = Json.encodeToString(screen)
 
             output.writeUTF(screenInfo)
 

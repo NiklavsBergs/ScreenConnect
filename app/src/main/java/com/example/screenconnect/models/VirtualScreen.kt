@@ -3,6 +3,7 @@ package com.example.screenconnect.models
 import android.util.Log
 import com.example.screenconnect.enums.Edge
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import java.lang.Math.abs
 import java.time.Duration
 import java.time.LocalTime
@@ -11,13 +12,11 @@ import java.time.LocalTime
 class VirtualScreen {
     var height: Int = 0
     var width: Int = 0
-    var phones = mutableListOf<Phone>()
 
-    var DPI: Int = 0
-
-    private var swipes = mutableListOf<Swipe>()
-
-    val GAP = 67
+    @Transient var phones = mutableListOf<Phone>()
+    @Transient var DPI: Int = 0
+    @Transient private var swipes = mutableListOf<Swipe>()
+    @Transient val GAP = 67
 
     fun addSwipe(swipe: Swipe, hostChangeCallback: (Phone) -> Unit): Boolean{
 

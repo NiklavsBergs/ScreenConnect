@@ -1,11 +1,9 @@
 package com.example.screenconnect.network
 
-import android.os.Build
 import android.os.Environment
 import android.util.Log
 import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.Swipe
-import com.example.screenconnect.screens.SharedViewModel
 import com.example.screenconnect.enums.MessageType
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -39,8 +37,6 @@ class MessageClient (
     var isConnected = false
 
     override fun run(){
-        Log.d("HOST",host)
-
         while(!isConnected){
             try {
                 socket.connect(InetSocketAddress(host, 8888), 5000)
@@ -59,16 +55,20 @@ class MessageClient (
                 e.printStackTrace()
             }
         }
+        readMessages()
+    }
 
+    private fun readMessages(){
+        val tempSocketDIS = socketDIS ?: return
         while(!socket.isClosed){
             try{
 
-                val messageTypeOrdinal = socketDIS!!.readInt()
+                val messageTypeOrdinal = tempSocketDIS.readInt()
                 val messageType = MessageType.values()[messageTypeOrdinal]
 
                 if(messageType == MessageType.INFO) {
                     Log.d("CLIENT-RECEIVE","Receiving info")
-                    val message = socketDIS?.readUTF()
+                    val message = tempSocketDIS.readUTF()
                     messageReceivedCallback(message!!)
                 }
                 else if (messageType == MessageType.IMAGE){
@@ -83,9 +83,8 @@ class MessageClient (
                 socket.close()
             }
 
-            }
-            Log.d("CLIENT-RECEIVE", "ENDED")
-
+        }
+        Log.d("CLIENT-RECEIVE", "ENDED")
     }
 
     fun sendPhoneInfo(phone: Phone){
@@ -183,7 +182,7 @@ class MessageClient (
 
     fun close() {
         try {
-            socket?.close()
+            socket.close()
             Log.e("CLIENT-CLOSE", "Closed")
         } catch (e: IOException) {
             Log.e("CLIENT-CLOSE", "ERROR")
