@@ -18,13 +18,13 @@ class WiFiDirectBroadcastReceiver(private val manager: WifiP2pManager?, private 
 
         when(intent.action) {
             WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
-                // Determine if Wi-Fi Direct mode is enabled or not, alert
-                // the Activity.
+                // Determine if Wi-Fi Direct mode is enabled or not
                 val state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
                 Log.d("WIFI_DIRECT", "Wi-Fi Direct state changed: $state")
                 sharedViewModel.isWifiEnabled = state == WifiP2pManager.WIFI_P2P_STATE_ENABLED
             }
             WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
+                // Available device list changed, update it in UI
                 Log.d("WIFI_DIRECT", "Peers changed")
                 manager?.requestPeers(channel) { peers: WifiP2pDeviceList? ->
                     peers?.let { sharedViewModel.peerList = it }
@@ -39,6 +39,7 @@ class WiFiDirectBroadcastReceiver(private val manager: WifiP2pManager?, private 
 
             }
             WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
+                // WiFi Direct connection changes (connect or disconnect)
                 val networkInfo: WifiP2pInfo? = intent
                     .getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO) as WifiP2pInfo?
 
@@ -59,7 +60,6 @@ class WiFiDirectBroadcastReceiver(private val manager: WifiP2pManager?, private 
                         sharedViewModel.infoText = "Connected"
                     }
 
-
                 } else {
                     // Connection is lost
                     sharedViewModel.connectedDeviceName = ""
@@ -70,8 +70,6 @@ class WiFiDirectBroadcastReceiver(private val manager: WifiP2pManager?, private 
             }
             WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
 //                val device = intent.getParcelableExtra<WifiP2pDevice>(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)
-//
-//                // Assuming 'thisDevice' is a state variable holding the current device details
 //                acticity.thisDevice = device
             }
         }

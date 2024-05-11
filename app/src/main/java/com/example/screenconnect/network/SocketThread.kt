@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.models.VirtualScreen
+import com.example.screenconnect.enums.MessageType
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedInputStream
@@ -27,9 +28,10 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
     override fun run() {
         try {
             while (!socket.isClosed) {
-                val type = input.readUTF()
+                val messageTypeOrdinal = input.readInt()
+                val messageType = MessageType.values()[messageTypeOrdinal]
 
-                if(type?.compareTo("Info") == 0) {
+                if(messageType == MessageType.INFO) {
                     Log.d("SERVER-RECEIVE","Receiving info")
                     val message = input.readUTF()
 
@@ -40,7 +42,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
 
                     messageReceivedListener?.onMessageReceived(message)
                 }
-                else if (type?.compareTo("Image") == 0){
+                else if (messageType == MessageType.IMAGE){
                     Log.d("SERVER-RECEIVE","Receiving image")
                     receiveImage()
                 }
@@ -65,7 +67,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         Log.d("SERVER-SEND", "Sending...")
 
         try{
-            output.writeUTF("Info")
+            output.writeInt(MessageType.INFO.ordinal)
 
             var phoneInfo = "PhoneInfo*" + Json.encodeToString(phone)
 
@@ -78,14 +80,14 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         catch (e: IOException){
             Log.d("SERVER-SEND-ERROR", e.toString())
         }
-        Log.d("SERVER-SEND-SOCKET-CLOSED", socket?.isClosed.toString())
+        Log.d("SERVER-SEND-SOCKET-CLOSED", socket.isClosed.toString())
     }
 
     fun sendScreenInfo(screen: VirtualScreen){
         Log.d("SERVER-SEND", "Sending...")
 
         try{
-            output.writeUTF("Info")
+            output.writeInt(MessageType.INFO.ordinal)
 
             //var screenInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth + "," + screen.DPI
             var screenInfo = "ScreenInfo*" + Json.encodeToString(screen)
@@ -100,29 +102,27 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         catch (e: IOException){
             Log.d("SERVER-SEND-ERROR", e.toString())
         }
-        Log.d("SERVER-SOCKET-CLOSED", socket?.isClosed.toString())
+        Log.d("SERVER-SOCKET-CLOSED", socket.isClosed.toString())
     }
 
     fun sendImage(file: File){
 
-        if(output != null) {
-            output.writeUTF("Image")
+        output.writeInt(MessageType.IMAGE.ordinal)
 
-            output.writeUTF(file.name)
+        output.writeUTF(file.name)
 
-            output.writeLong(file.length())
+        output.writeLong(file.length())
 
-            Log.d("SERVER-SEND-IMAGE", file.name)
+        Log.d("SERVER-SEND-IMAGE", file.name)
 
-            val fileIS = FileInputStream(file)
-            val bufferArray = ByteArray(5_000_000)
-            var lengthRead: Int
+        val fileIS = FileInputStream(file)
+        val bufferArray = ByteArray(5_000_000)
+        var lengthRead: Int
 
-            while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
-                output.write(bufferArray, 0, lengthRead)
-            }
-            fileIS.close()
+        while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
+            output.write(bufferArray, 0, lengthRead)
         }
+        fileIS.close()
     }
 
     private fun receiveImage(){
@@ -137,16 +137,14 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
 
         Log.d("CLIENT-SAVE-IMAGE", fileToSave.path)
 
-        if(fileLength != null) {
-            while (fileLength > 0) {
-                val bytesRead =
-                    input.read(bufferArray, 0,
-                        Integer.min(fileLength.toInt(), bufferArray.size)
-                    )
-                if (bytesRead == -1) break
-                fileOutputStream.write(bufferArray, 0, bytesRead!!)
-                fileLength -= bytesRead!!
-            }
+        while (fileLength > 0) {
+            val bytesRead =
+                input.read(bufferArray, 0,
+                    Integer.min(fileLength.toInt(), bufferArray.size)
+                )
+            if (bytesRead == -1) break
+            fileOutputStream.write(bufferArray, 0, bytesRead)
+            fileLength -= bytesRead
         }
 
         fileOutputStream.flush()

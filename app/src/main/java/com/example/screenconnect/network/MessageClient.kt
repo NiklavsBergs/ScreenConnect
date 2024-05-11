@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.screens.SharedViewModel
+import com.example.screenconnect.enums.MessageType
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedInputStream
@@ -42,9 +43,9 @@ class MessageClient (
 
         while(!isConnected){
             try {
-                socket?.connect(InetSocketAddress(host, 8888), 5000)
-                inputStream = socket?.getInputStream()
-                outputStream = socket?.getOutputStream()
+                socket.connect(InetSocketAddress(host, 8888), 5000)
+                inputStream = socket.getInputStream()
+                outputStream = socket.getOutputStream()
 
                 socketDOS = DataOutputStream(BufferedOutputStream(outputStream))
                 socketDIS = DataInputStream(BufferedInputStream(inputStream))
@@ -56,21 +57,21 @@ class MessageClient (
             } catch (e: IOException) {
                 Log.d("CLIENT-START", "ERROR")
                 e.printStackTrace()
-                isConnected = false
             }
         }
 
-        while(socket!=null  && !socket!!.isClosed){
+        while(!socket.isClosed){
             try{
 
-                val type = socketDIS?.readUTF()
+                val messageTypeOrdinal = socketDIS!!.readInt()
+                val messageType = MessageType.values()[messageTypeOrdinal]
 
-                if(type?.compareTo("Info") == 0) {
+                if(messageType == MessageType.INFO) {
                     Log.d("CLIENT-RECEIVE","Receiving info")
                     val message = socketDIS?.readUTF()
                     messageReceivedCallback(message!!)
                 }
-                else if (type?.compareTo("Image") == 0){
+                else if (messageType == MessageType.IMAGE){
                     Log.d("CLIENT-RECEIVE","Receiving image")
                     val savedFile = receiveImage()
                     imageReceivedCallback(savedFile)
@@ -83,14 +84,14 @@ class MessageClient (
             }
 
             }
-            Log.d("CLIENT-RECEIVE-END", "ENDED")
+            Log.d("CLIENT-RECEIVE", "ENDED")
 
     }
 
     fun sendPhoneInfo(phone: Phone){
         try{
             if(socketDOS != null) {
-                socketDOS!!.writeUTF("Info")
+                socketDOS!!.writeInt(MessageType.INFO.ordinal)
 
                 var phoneInfo = Json.encodeToString(phone)
 
@@ -110,7 +111,7 @@ class MessageClient (
     fun sendSwipe(swipe: Swipe){
         try{
             if(socketDOS != null) {
-                socketDOS!!.writeUTF("Info")
+                socketDOS!!.writeInt(MessageType.INFO.ordinal)
 
                 var swipe = Json.encodeToString(swipe)
 
@@ -130,7 +131,7 @@ class MessageClient (
     fun sendImage(file: File){
 
         if(socketDOS != null) {
-            socketDOS!!.writeUTF("Image")
+            socketDOS!!.writeInt(MessageType.IMAGE.ordinal)
 
             socketDOS!!.writeUTF(file.name)
 
@@ -168,7 +169,7 @@ class MessageClient (
                     socketDIS?.read(bufferArray, 0, min(fileLength.toInt(), bufferArray.size))
                 if (bytesRead == -1) break
                 fileOutputStream.write(bufferArray, 0, bytesRead!!)
-                fileLength -= bytesRead!!
+                fileLength -= bytesRead
             }
         }
 

@@ -151,17 +151,17 @@ class SharedViewModel() : ViewModel() {
 
 
     private fun startMessageClient() {
+        //Starting Client with a delay to allow server socket to start
         Handler().postDelayed({
             Log.d("CLIENT", "Starting...")
             Log.d("SERVER-HOST", host)
 
             messageClient = MessageClient(host,
                 { message ->
-                // Handle the received message
-                Log.d("MESSAGE", "Received: $message")
+                    // Handle the received message
+                    Log.d("MESSAGE", "Received: $message")
 
-                parseMessageFromServer(message)
-
+                    parseMessageFromServer(message)
                 },
                 { file ->
                     // Handle the received image
@@ -172,9 +172,7 @@ class SharedViewModel() : ViewModel() {
                     activePhoto = file
 
                     processReceivedImage(file)
-
                 })
-
 
             messageClient.start()
             isServerRunning = true;
