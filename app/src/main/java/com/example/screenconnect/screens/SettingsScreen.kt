@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -177,6 +178,7 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                 sharedViewModel.peerList?.let { peers ->
                     LazyColumn {
                         itemsIndexed(peers.deviceList.toList()) { index, peer ->
+                            ListItem(headlineContent = { "Device $index: ${peer.deviceName}" })
                             Text(
                                 text = "Device $index: ${peer.deviceName}",
                                 modifier = Modifier.clickable {
@@ -185,6 +187,7 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                                 })
                         }
                     }
+
                 }
 
             } else {

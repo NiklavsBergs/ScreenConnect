@@ -31,7 +31,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
                 val messageTypeOrdinal = input.readInt()
                 val messageType = MessageType.values()[messageTypeOrdinal]
 
-                if(messageType == MessageType.INFO) {
+                if(messageType == MessageType.SWIPE) {
                     Log.d("SERVER-RECEIVE","Receiving info")
                     val message = input.readUTF()
 
@@ -67,9 +67,9 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         Log.d("SERVER-SEND", "Sending...")
 
         try{
-            output.writeInt(MessageType.INFO.ordinal)
+            output.writeInt(MessageType.PHONE.ordinal)
 
-            var phoneInfo = "PhoneInfo*" + Json.encodeToString(phone)
+            val phoneInfo = Json.encodeToString(phone)
 
             output.writeUTF(phoneInfo)
 
@@ -87,9 +87,9 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         Log.d("SERVER-SEND", "Sending...")
 
         try{
-            output.writeInt(MessageType.INFO.ordinal)
+            output.writeInt(MessageType.SCREEN.ordinal)
 
-            var screenInfo = "ScreenInfo*" + Json.encodeToString(screen)
+            val screenInfo = Json.encodeToString(screen)
 
             output.writeUTF(screenInfo)
 
@@ -114,7 +114,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         Log.d("SERVER-SEND-IMAGE", file.name)
 
         val fileIS = FileInputStream(file)
-        val bufferArray = ByteArray(5_000_000)
+        val bufferArray = ByteArray(1_000_000)
         var lengthRead: Int
 
         while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {

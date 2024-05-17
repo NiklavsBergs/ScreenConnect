@@ -192,20 +192,13 @@ class VirtualScreen {
         // (Can't be NONE)
         val diff = edgeA.ordinal - edgeB.ordinal
 
-        if(kotlin.math.abs(diff) == 2){
-            return swipeA.phone.rotation
-        }
-        else if (diff == 0){
-            return swipeA.phone.rotation + 180
-        }
-        else if (diff == -1 || diff == 3){
-            return swipeA.phone.rotation + 90
-        }
-        else if (diff == 1 || diff == -3){
-            return swipeA.phone.rotation - 90
+        when (diff) {
+            0 -> return swipeA.phone.rotation + 180
+            -1, 3 -> return swipeA.phone.rotation + 90
+            1, -3 -> return swipeA.phone.rotation - 90
         }
 
-        return 0
+        return swipeA.phone.rotation
     }
 
     private fun getBPositionAndUpdateScreen(swipeA: Swipe, swipeB: Swipe, phoneB: Phone): Position{
@@ -223,7 +216,7 @@ class VirtualScreen {
         Log.d("B Con point", swipeBPos.toString())
 
         // Center devices
-        var change = centerB.centerBy(centerA)
+        var change = center(centerA, centerB)
 
         Log.d("Centered", change.toString())
 
@@ -246,12 +239,11 @@ class VirtualScreen {
             Edge.NONE -> {}
         }
 
-        // Relative rotation between phones
+        // Relative rotation between both phones
         val rotation = phoneB.rotation - swipeA.phone.rotation
 
         if(abs(rotation) == 90){
-
-            // Adjust position with rotation
+            // Adjust B position with rotation
             change.x = change.x - (centerB.y - centerB.x)
             change.y = change.y + (centerB.y - centerB.x)
             Log.d("Change after ROT", change.toString())
@@ -261,6 +253,7 @@ class VirtualScreen {
             Log.d("ChangeB after ROT", changeB.toString())
         }
         else if(abs(rotation) == 180){
+            // Adjust B change with rotation
             changeB = changeB.rotate(rotation)
             Log.d("ChangeB after ROT", changeB.toString())
         }
@@ -283,6 +276,9 @@ class VirtualScreen {
         return posB
     }
 
+    private fun center (centerA : Position, centerB: Position) : Position {
+        return Position((centerA.x - centerB.x), (centerA.y - centerB.y))
+    }
     private fun updateScreen(posB: Position, phoneB: Phone){
         // Check if phone B goes outside screen, if it does, change screen
         if(kotlin.math.abs(phoneB.rotation) == 90){

@@ -23,7 +23,7 @@ import java.net.Socket
 
 class MessageClient (
     private val host: String,
-    private val messageReceivedCallback: (String) -> Unit,
+    private val messageReceivedCallback: (MessageType, String) -> Unit,
     private val imageReceivedCallback: (File) -> Unit
 ) : Thread(){
 
@@ -40,6 +40,7 @@ class MessageClient (
         while(!isConnected){
             try {
                 socket.connect(InetSocketAddress(host, 8888), 5000)
+
                 inputStream = socket.getInputStream()
                 outputStream = socket.getOutputStream()
 
@@ -66,15 +67,16 @@ class MessageClient (
                 val messageTypeOrdinal = tempSocketDIS.readInt()
                 val messageType = MessageType.values()[messageTypeOrdinal]
 
-                if(messageType == MessageType.INFO) {
-                    Log.d("CLIENT-RECEIVE","Receiving info")
-                    val message = tempSocketDIS.readUTF()
-                    messageReceivedCallback(message!!)
-                }
-                else if (messageType == MessageType.IMAGE){
+                if (messageType == MessageType.IMAGE){
+                    Log.d("CLIENT-SAVE-IMAGE", "START")
                     Log.d("CLIENT-RECEIVE","Receiving image")
                     val savedFile = receiveImage()
                     imageReceivedCallback(savedFile)
+                }
+                else {
+                    Log.d("CLIENT-RECEIVE","Receiving info")
+                    val message = tempSocketDIS.readUTF()
+                    messageReceivedCallback(messageType, message)
                 }
 
             } catch (e: IOException) {
@@ -90,7 +92,7 @@ class MessageClient (
     fun sendPhoneInfo(phone: Phone){
         try{
             if(socketDOS != null) {
-                socketDOS!!.writeInt(MessageType.INFO.ordinal)
+                socketDOS!!.writeInt(MessageType.PHONE.ordinal)
 
                 var phoneInfo = Json.encodeToString(phone)
 
@@ -108,18 +110,15 @@ class MessageClient (
     }
 
     fun sendSwipe(swipe: Swipe){
+        val tempSocketDOS = socketDOS ?: return
         try{
-            if(socketDOS != null) {
-                socketDOS!!.writeInt(MessageType.INFO.ordinal)
+            tempSocketDOS.writeInt(MessageType.SWIPE.ordinal)
 
-                var swipe = Json.encodeToString(swipe)
+            var swipe = Json.encodeToString(swipe)
+            tempSocketDOS.writeUTF(swipe)
+            tempSocketDOS.flush()
 
-                Log.d("CLIENT-SEND-SWIPE", swipe)
-
-                socketDOS!!.writeUTF(swipe)
-
-                socketDOS!!.flush()
-            }
+            Log.d("CLIENT-SEND-SWIPE", swipe)
         }
         catch (e: IOException){
             Log.d("CLIENT-SEND", "ERROR")

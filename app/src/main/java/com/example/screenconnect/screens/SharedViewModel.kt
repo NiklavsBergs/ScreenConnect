@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.graphics.scale
 import androidx.lifecycle.ViewModel
+import com.example.screenconnect.enums.MessageType
 import com.example.screenconnect.enums.SwipeType
 import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.Position
@@ -157,11 +158,11 @@ class SharedViewModel() : ViewModel() {
             Log.d("SERVER-HOST", host)
 
             messageClient = MessageClient(host,
-                { message ->
+                { type, message ->
                     // Handle the received message
                     Log.d("MESSAGE", "Received: $message")
 
-                    parseMessageFromServer(message)
+                    parseMessageFromServer(type, message)
                 },
                 { file ->
                     // Handle the received image
@@ -179,22 +180,22 @@ class SharedViewModel() : ViewModel() {
         }, 500)
     }
 
-    private fun parseMessageFromServer(message: String){
-        var type = message.split("*")[0]
-        var info = message.split("*")[1]
+    private fun parseMessageFromServer(type: MessageType, message: String){
+
 
         when(type){
-            "PhoneInfo" -> {
-                thisPhone = Json.decodeFromString<Phone>(info)
+            MessageType.PHONE -> {
+                thisPhone = Json.decodeFromString<Phone>(message)
                 Log.d("MESSAGE", "Saved PhoneInfo")
             }
-            "ScreenInfo" -> {
-                virtualScreen = Json.decodeFromString<VirtualScreen>(info)
+            MessageType.SCREEN -> {
+                virtualScreen = Json.decodeFromString<VirtualScreen>(message)
 
                 activePhoto?.let { processReceivedImage(it) }
 
                 Log.d("MESSAGE", "Saved ScreenInfo")
             }
+            else -> {}
         }
     }
 
