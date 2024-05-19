@@ -2,6 +2,7 @@ package com.example.screenconnect.network
 
 import android.os.Environment
 import android.util.Log
+import com.example.screenconnect.enums.MessageType
 import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.VirtualScreen
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +24,7 @@ import java.net.Socket
 
 class MessageServer (
     private val thisPhone: Phone,
-    private val messageReceivedCallback: (String) -> Unit
+    private val messageReceivedCallback: (String, MessageType) -> Unit
     ) : Thread(), MessageReceivedListener{
 
     private val connectLimit = 10
@@ -47,8 +48,8 @@ class MessageServer (
         }
     }
 
-    override fun onMessageReceived(message: String){
-        messageReceivedCallback(message)
+    override fun onMessageReceived(message: String, type: MessageType){
+        messageReceivedCallback(message, type)
     }
 
     fun updateClientInfo(screen: VirtualScreen){

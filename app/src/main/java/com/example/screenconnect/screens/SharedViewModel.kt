@@ -23,6 +23,7 @@ import com.example.screenconnect.network.MessageServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileInputStream
@@ -86,7 +87,7 @@ class SharedViewModel() : ViewModel() {
                     else if (swipe.type == SwipeType.CONNECT){
                         var phoneAdded = virtualScreen.addSwipe(swipe) {
                                 hostUpdated ->
-                            thisPhone = hostUpdated
+                            thisPhone = hostUpdated.copy()
                             activePhoto?.let { processReceivedImage(it) }
                         }
 
@@ -102,6 +103,29 @@ class SharedViewModel() : ViewModel() {
                     messageClient.sendSwipe(swipe)
                     Log.d("CLIENT", "Swipe sent")
                 }
+            }
+        }
+    }
+
+    fun sendPhoneInfo() {
+        if (isGroupOwner) {
+            val changed = virtualScreen.updatePhone(thisPhone){ hostUpdated ->
+                thisPhone = hostUpdated.copy()
+                activePhoto?.let { processReceivedImage(it) }
+            }
+
+            if(changed){
+                serverScope.launch {
+                    messageServer.updateClientInfo(virtualScreen)
+                }
+            }
+
+            Log.d("SERVER", "Phone updated")
+
+        } else {
+            clientScope.launch {
+                messageClient.sendPhoneInfo(thisPhone)
+                Log.d("CLIENT", "Phone info sent")
             }
         }
     }
@@ -141,10 +165,10 @@ class SharedViewModel() : ViewModel() {
         isServerRunning = true;
         Log.d("HOST-SERVER", "Starting...")
 
-        messageServer = MessageServer(thisPhone) { message ->
+        messageServer = MessageServer(thisPhone) { message, type ->
             // Handle the received message
 
-            parseMessageFromClient(message)
+            parseMessageFromClient(message, type)
         }
 
         messageServer.start()
@@ -199,37 +223,55 @@ class SharedViewModel() : ViewModel() {
         }
     }
 
-    private fun parseMessageFromClient(message: String){
-
-        var swipe = Json.decodeFromString<Swipe>(message)
+    private fun parseMessageFromClient(message: String, type: MessageType){
 
         Log.d("SWIPE-RECEIVED", message)
 
-        var phoneAdded: Boolean
+        when(type){
+            MessageType.SWIPE -> {
+                var swipe = Json.decodeFromString<Swipe>(message)
+                if(swipe.type == SwipeType.DISCONNECT){
+                    var removedPhone = swipe.phone
+                    virtualScreen.removePhone(removedPhone)
 
-        if(swipe.type == SwipeType.DISCONNECT){
-            var removedPhone = swipe.phone
-            virtualScreen.removePhone(removedPhone)
+                    removedPhone.position = Position(0,0)
+                    removedPhone.rotation = 0
+                    messageServer.sendClientInfo(removedPhone)
 
-            removedPhone.position = Position(0,0)
-            removedPhone.rotation = 0
-            messageServer.sendClientInfo(removedPhone)
+                    var tempScreen = VirtualScreen()
+                    tempScreen.height = removedPhone.height
+                    tempScreen.width = removedPhone.width
 
-            var tempScreen = VirtualScreen()
-            tempScreen.height = removedPhone.height
-            tempScreen.width = removedPhone.width
+                    messageServer.sendScreenInfo(tempScreen, removedPhone)
+                }
+                else if(swipe.type == SwipeType.CONNECT){
+                    // If the new device gets added returns True
+                    var  phoneAdded = virtualScreen.addSwipe(swipe) { hostUpdated ->
+                        thisPhone = hostUpdated.copy()
+                        activePhoto?.let { processReceivedImage(it) }
+                    }
 
-            messageServer.sendScreenInfo(tempScreen, removedPhone)
-        }
-        else if(swipe.type == SwipeType.CONNECT){
-            phoneAdded = virtualScreen.addSwipe(swipe) { hostUpdated ->
-                thisPhone = hostUpdated
-                activePhoto?.let { processReceivedImage(it) }
+                    if(phoneAdded){
+                        messageServer.updateClientInfo(virtualScreen)
+                    }
+                }
             }
-            if(phoneAdded){
-                messageServer.updateClientInfo(virtualScreen)
+            MessageType.PHONE -> {
+                var phone = Json.decodeFromString<Phone>(message)
+                val changed = virtualScreen.updatePhone(phone) { hostUpdated ->
+                    Log.d("Host update",  Json.encodeToString(hostUpdated))
+                    thisPhone = hostUpdated.copy()
+                    activePhoto?.let { processReceivedImage(it) }
+                }
+
+                if(changed){
+                    messageServer.updateClientInfo(virtualScreen)
+                }
             }
+
+            else -> {}
         }
+
     }
 
     fun processReceivedImage(file: File) {

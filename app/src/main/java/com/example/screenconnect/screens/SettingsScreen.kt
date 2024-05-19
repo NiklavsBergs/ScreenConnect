@@ -10,16 +10,40 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -27,6 +51,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.screenconnect.components.numberSelect
 import com.example.screenconnect.components.statusBar
 import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.network.Connection
@@ -35,8 +60,14 @@ import com.example.screenconnect.util.isLocationEnabled
 import com.example.screenconnect.util.locationPopup
 import com.example.screenconnect.util.wifiPopup
 import com.example.screenconnect.screens.SharedViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
+import java.util.Timer
+import java.util.TimerTask
+import kotlin.concurrent.schedule
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewModel, connection: Connection) {
@@ -56,6 +87,30 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
     val initialPosition = remember { mutableStateOf(Offset.Zero) }
     val endPosition = remember { mutableStateOf(Offset.Zero) }
     var isDragging = false
+
+    var borderVert by remember { mutableStateOf(sharedViewModel.thisPhone.borderVert) }
+    var borderHor by remember { mutableStateOf(sharedViewModel.thisPhone.borderHor) }
+
+    var timer by remember { mutableStateOf<Timer?>(null) }
+
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var showBottomSheet by remember { mutableStateOf(false) }
+
+
+    fun updatePhoneInfo () {
+        // Send phone update only if the borders are not changed for 0.5 seconds
+
+        // Cancel existing timer if exists
+        timer?.cancel()
+
+        // Create a new timer
+        timer = Timer()
+
+        timer?.schedule(500){
+            sharedViewModel.sendPhoneInfo()
+        }
+    }
 
     Column(modifier = Modifier
         .fillMaxSize()
@@ -148,7 +203,7 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
         ) {
 
             if (!sharedViewModel.isConnected) {
-                Button(
+                ElevatedButton(
                     onClick = {
                         if (!sharedViewModel.isWifiEnabled) {
                             wifiPopup(context)
@@ -169,7 +224,7 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                         }
                     },
                     modifier = Modifier
-                        .padding(top = 16.dp)
+                        .padding(top = 16.dp, bottom = 20.dp)
                         .align(alignment = Alignment.CenterHorizontally)
                 ) {
                     Text(text = "Discover Peers")
@@ -178,47 +233,143 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                 sharedViewModel.peerList?.let { peers ->
                     LazyColumn {
                         itemsIndexed(peers.deviceList.toList()) { index, peer ->
-                            ListItem(headlineContent = { "Device $index: ${peer.deviceName}" })
-                            Text(
-                                text = "Device $index: ${peer.deviceName}",
+                            ListItem(
+                                headlineContent = { Text("${peer.deviceName}") },
+                                trailingContent = {
+                                    Text("Connect")
+//                                    Icon(
+//                                        Icons.Filled.PlayArrow,
+//                                        contentDescription = "Localized description",
+//                                    )
+                                },
+
                                 modifier = Modifier.clickable {
                                     // Handle the click event, initiate connection to the selected peer
                                     connection.connectToPeer(peer)
                                 })
+                            HorizontalDivider()
                         }
                     }
 
                 }
 
             } else {
-                Button(
-                    onClick = {
-                        connection.disconnect()
-                    },
+                Spacer(modifier = Modifier.weight(1f))
+
+
+                Row (
                     modifier = Modifier
-                        .padding(top = 16.dp)
-                        .align(alignment = Alignment.CenterHorizontally)
-                ) {
-                    Text(text = "Disconnect")
+                        .padding(top = 40.dp, bottom = 20.dp),
+                )
+                {
+                    ExtendedFloatingActionButton(
+                        onClick = { launcher.launch("image/*") },
+                        icon = { Icon(Icons.Filled.Add, "Localized description") },
+                        text = { Text(text = "Select image") },
+                    )
+
+                    Spacer(Modifier.weight(1f))
+
+                    FloatingActionButton(
+                        onClick = {
+                            showBottomSheet = true
+                        },
+                    ){
+                        Icon(Icons.Filled.Settings, contentDescription = "")
+                    }
                 }
 
-                Button(onClick = {
-                    launcher.launch("image/*")
-                },
-                    modifier = Modifier.align(alignment = Alignment.CenterHorizontally)) {
-                    Text(text = "Select image")
-                }
             }
 
-            
+
+            if (showBottomSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = {
+                        showBottomSheet = false
+                    },
+                    sheetState = sheetState
+                ) {
+                    // Sheet content
+                    Row {
+                        Spacer(modifier = Modifier.weight(1f))
+                        IconButton(
+                            modifier = Modifier.padding(end = 10.dp),
+                            onClick = {
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    showBottomSheet = false
+                                }
+                                }
+                        }) {
+                            Icon(Icons.Outlined.Close, contentDescription = "Localized description")
+                        }
+                    }
+
+                    Row {
+                        Spacer(modifier = Modifier.weight(1f))
+                        numberSelect(
+                            borderVert,
+                            "Vertical",
+                            {
+                                if(borderVert in 0.0..9.5){
+                                    borderVert += 0.5
+                                    sharedViewModel.thisPhone.borderVert = borderVert
+                                }
+                            },
+                            {
+                                if(borderVert >= 0.5){
+                                    borderVert -= 0.5
+                                    sharedViewModel.thisPhone.borderVert = borderVert
+                                }
+                            }
+                        )
+
+                        numberSelect(
+                            borderHor,
+                            "Horizontal",
+                            {
+                                if(borderHor in 0.0..9.5){
+                                    borderHor += 0.5
+                                    sharedViewModel.thisPhone.borderHor = borderHor
+
+                                    updatePhoneInfo()
+                                }
+                            },
+                            {
+                                if(borderHor >= 0.5){
+                                    borderHor -= 0.5
+                                    sharedViewModel.thisPhone.borderHor = borderHor
+
+                                    updatePhoneInfo()
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            connection.disconnect()
+                            scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    showBottomSheet = false
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                    ) {
+                        Text(text = "Disconnect")
+                    }
+                }
+            }
 
         }
 
     }
 
-
-
 }
+
 
 
 

@@ -31,20 +31,20 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
                 val messageTypeOrdinal = input.readInt()
                 val messageType = MessageType.values()[messageTypeOrdinal]
 
-                if(messageType == MessageType.SWIPE) {
+                if (messageType == MessageType.IMAGE){
+                    Log.d("SERVER-RECEIVE","Receiving image")
+                    receiveImage()
+                }
+                else {
                     Log.d("SERVER-RECEIVE","Receiving info")
                     val message = input.readUTF()
 
-                    if(phoneId == ""){
+                    if(phoneId == "" && messageType == MessageType.SWIPE){
                         var swipe = Json.decodeFromString<Swipe>(message)
                         phoneId = swipe.phone.id
                     }
 
-                    messageReceivedListener.onMessageReceived(message)
-                }
-                else if (messageType == MessageType.IMAGE){
-                    Log.d("SERVER-RECEIVE","Receiving image")
-                    receiveImage()
+                    messageReceivedListener.onMessageReceived(message, messageType)
                 }
             }
         } catch (e: IOException) {

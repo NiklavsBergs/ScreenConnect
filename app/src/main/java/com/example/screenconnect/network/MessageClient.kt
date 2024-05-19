@@ -90,18 +90,17 @@ class MessageClient (
     }
 
     fun sendPhoneInfo(phone: Phone){
+        val tempSocketDOS = socketDOS ?: return
         try{
-            if(socketDOS != null) {
-                socketDOS!!.writeInt(MessageType.PHONE.ordinal)
+            tempSocketDOS.writeInt(MessageType.PHONE.ordinal)
 
-                var phoneInfo = Json.encodeToString(phone)
+            var phoneInfo = Json.encodeToString(phone)
 
-                socketDOS!!.writeUTF(phoneInfo)
+            tempSocketDOS.writeUTF(phoneInfo)
 
-                socketDOS!!.flush()
+            tempSocketDOS.flush()
 
-                Log.d("CLIENT-SEND-INFO", phoneInfo)
-            }
+            Log.d("CLIENT-SEND-INFO", phoneInfo)
         }
         catch (e: IOException){
             Log.d("CLIENT-SEND", "ERROR")
