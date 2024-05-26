@@ -17,7 +17,6 @@ import com.example.screenconnect.network.Connection
 fun Navigation(sharedViewModel: SharedViewModel, connection: Connection) {
     val navController = rememberNavController()
 
-    sharedViewModel.navController = navController
     NavHost(navController = navController, startDestination = Screen.SettingsScreen.route){
         composable(route = Screen.SettingsScreen.route){
             SettingsScreen(navController, sharedViewModel, connection)

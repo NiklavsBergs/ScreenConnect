@@ -2,21 +2,16 @@ package com.example.screenconnect.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.Matrix
 import android.net.Uri
 import android.net.wifi.p2p.WifiP2pDeviceList
 import android.os.Handler
 import android.util.Log
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.scale
 import androidx.lifecycle.ViewModel
-import androidx.navigation.NavController
-import com.example.screenconnect.R
 import com.example.screenconnect.enums.MessageType
 import com.example.screenconnect.enums.SwipeType
 import com.example.screenconnect.models.Phone
@@ -28,7 +23,6 @@ import com.example.screenconnect.network.MessageServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -72,8 +66,6 @@ class SharedViewModel() : ViewModel() {
     private var activePhoto: File? = null
     var logoBitmap: Bitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888)
 
-    lateinit var navController: NavController
-
     fun sendSwipe(swipe: Swipe){
         if(isConnected){
             if(!isServerRunning){
@@ -96,14 +88,11 @@ class SharedViewModel() : ViewModel() {
                         if(phoneAdded){
                             messageServer.updateClientInfo(virtualScreen)
                         }
-
-                        Log.d("SERVER", "Swipe added")
                     }
                 }
             } else {
                 clientScope.launch {
                     messageClient.sendSwipe(swipe)
-                    Log.d("CLIENT", "Swipe sent")
                 }
             }
         }
@@ -121,19 +110,14 @@ class SharedViewModel() : ViewModel() {
                     messageServer.updateClientInfo(virtualScreen)
                 }
             }
-
-            Log.d("SERVER", "Phone updated")
-
         } else {
             clientScope.launch {
                 messageClient.sendPhoneInfo(thisPhone)
-                Log.d("CLIENT", "Phone info sent")
             }
         }
     }
 
     fun sendImage(file: File){
-        Log.d("SEND-IMAGE", "Call")
         if(!isServerRunning){
             startServer()
         }
@@ -142,19 +126,17 @@ class SharedViewModel() : ViewModel() {
             serverScope.launch {
                 messageServer.sendImage(file)
                 activePhoto = file
-                Log.d("MESSAGE-SERVER", "Image Sent")
             }
         } else {
             clientScope.launch {
                 messageClient.sendImage(file)
                 activePhoto = file
-                Log.d("MESSAGE-CLIENT", "Image Sent")
             }
         }
     }
 
+    // Start socket communication
     fun startServer(){
-
         if(!isServerRunning && isConnected && isGroupOwner){
             startMessageServer()
         }
@@ -165,7 +147,6 @@ class SharedViewModel() : ViewModel() {
 
     private fun startMessageServer() {
         isServerRunning = true;
-        Log.d("HOST-SERVER", "Starting...")
 
         messageServer = MessageServer(thisPhone,
             { message, type ->
@@ -188,20 +169,14 @@ class SharedViewModel() : ViewModel() {
     private fun startMessageClient() {
         //Starting Client with a delay to allow server socket to start
         Handler().postDelayed({
-            Log.d("CLIENT", "Starting...")
-            Log.d("SERVER-HOST", host)
 
             messageClient = MessageClient(host,
                 { type, message ->
                     // Handle the received message
-                    Log.d("MESSAGE", "Received: $message")
-
                     parseMessageFromServer(type, message)
                 },
                 { file ->
                     // Handle the received image
-                    Log.d("FILE", file.path)
-
                     imageUri = Uri.fromFile(file)
 
                     activePhoto = file
@@ -215,26 +190,21 @@ class SharedViewModel() : ViewModel() {
     }
 
     private fun parseMessageFromServer(type: MessageType, message: String){
-
+        // Update state received from server
         when(type){
             MessageType.PHONE -> {
                 thisPhone = Json.decodeFromString<Phone>(message)
-                Log.d("MESSAGE", "Saved PhoneInfo")
             }
             MessageType.SCREEN -> {
                 virtualScreen = Json.decodeFromString<VirtualScreen>(message)
 
                 processReceivedImage(activePhoto)
-
-                Log.d("MESSAGE", "Saved ScreenInfo")
             }
             else -> {}
         }
     }
 
     private fun parseMessageFromClient(message: String, type: MessageType){
-
-        Log.d("SWIPE-RECEIVED", message)
 
         when(type){
             MessageType.SWIPE -> {
@@ -245,6 +215,7 @@ class SharedViewModel() : ViewModel() {
                 }
                 else if(swipe.type == SwipeType.CONNECT){
                     // If the new device gets added returns True
+                    // hostUpdated returns updated host phone object
                     var  phoneAdded = virtualScreen.addSwipe(swipe) { hostUpdated ->
                         thisPhone = hostUpdated.copy()
                         processReceivedImage(activePhoto)
@@ -258,7 +229,6 @@ class SharedViewModel() : ViewModel() {
             MessageType.PHONE -> {
                 var phone = Json.decodeFromString<Phone>(message)
                 val changed = virtualScreen.updatePhone(phone) { hostUpdated ->
-                    Log.d("Host update",  Json.encodeToString(hostUpdated))
                     thisPhone = hostUpdated.copy()
                     processReceivedImage(activePhoto)
                 }
@@ -280,26 +250,16 @@ class SharedViewModel() : ViewModel() {
             // Makes image the size of the virtual screen
             var bitmap = upscaleAndCropBitmap(file)
 
-            Log.d("Phone height", thisPhone.height.toString())
-            Log.d("Phone width", thisPhone.width.toString())
-
             var position = thisPhone.position
 
-            // Adjust image for devices rotation
+            // Adjust image for devices rotation, adjust position with rotation
             if(thisPhone.rotation != 0){
 
                 var matrix = Matrix()
-
                 matrix.postRotate(-1 * thisPhone.rotation.toFloat())
-
                 bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 
-                Log.d("Bitmap height rotated", bitmap.height.toString())
-                Log.d("Bitmap width rotated", bitmap.width.toString())
-
                 position = thisPhone.position.rotateWithScreen(Position(virtualScreen.width, virtualScreen.height), thisPhone)
-                Log.d("Phone X rotated", position.x.toString())
-                Log.d("Phone Y rotated", position.y.toString())
             }
 
 
@@ -312,16 +272,13 @@ class SharedViewModel() : ViewModel() {
                 thisPhone.height,
             )
 
-            // Scale to actual device size
+            // Scale to actual device size in pixels and show image
             croppedBitmap = croppedBitmap.scale(thisPhone.widthReal, thisPhone.heightReal)
 
             sharedImage = croppedBitmap
             showImage = true
-
-            //navController.navigate(Screen.SharedScreen.route)
         }
         catch (e: IOException){
-            Log.d("IMAGE-SHOW", "ERROR")
             e.printStackTrace()
         }
     }
@@ -335,8 +292,10 @@ class SharedViewModel() : ViewModel() {
             // If there is no image selected, display logo
             val widthRatio = virtualScreen.width.toFloat() /logoBitmap.width.toFloat()
             val heightRatio = virtualScreen.height.toFloat() /logoBitmap.width.toFloat()
+
             val width = (logoBitmap.width * max(widthRatio, heightRatio)).roundToInt()
             val height = (logoBitmap.height * max(widthRatio, heightRatio)).roundToInt()
+
             bitmap = Bitmap.createScaledBitmap(logoBitmap, width, height, true)
         }
         else {
@@ -353,8 +312,6 @@ class SharedViewModel() : ViewModel() {
             val heightRatio = virtualScreen.height.toFloat() / options.outHeight
             val scaleFactor = if (widthRatio > heightRatio) widthRatio else heightRatio
 
-            Log.d("Scale", scaleFactor.toString())
-
             // +2 for rounding errors
             val scaledWidth = (options.outWidth * scaleFactor).toInt() + 2
 
@@ -367,17 +324,8 @@ class SharedViewModel() : ViewModel() {
             bitmap = BitmapFactory.decodeFile(file.path, options)
         }
 
-        Log.d("Bitmap height scaled",  bitmap.height.toString())
-        Log.d("Bitmap width scaled", bitmap.width.toString())
-
-        Log.d("Screen height",  virtualScreen.height.toString())
-        Log.d("Screen width", virtualScreen.width.toString())
-
         val heightDiff = ((bitmap.height - virtualScreen.height) / 2F).roundToInt()
         val widthDiff = ((bitmap.width - virtualScreen.width) / 2F).roundToInt()
-
-        Log.d("height diff",  heightDiff.toString())
-        Log.d("width diff", widthDiff.toString())
 
         // Crop the bitmap
         return Bitmap.createBitmap(bitmap, widthDiff, heightDiff, virtualScreen.width, virtualScreen.height)

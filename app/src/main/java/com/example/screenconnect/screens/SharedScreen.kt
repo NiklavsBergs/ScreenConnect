@@ -210,6 +210,7 @@ fun SharedScreen(
                             onClick = { launcher.launch("image/*") },
                             icon = { Icon(Icons.Filled.Add, "Localized description") },
                             text = { Text(text = "Select image") },
+                            modifier = Modifier.padding(bottom = 20.dp)
                         )
                         Spacer(modifier = Modifier.weight(1f))
                     }
@@ -227,6 +228,7 @@ fun SharedScreen(
                         },
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
+                            .padding(bottom = 20.dp)
                     ) {
                         Text(text = "Disconnect")
                     }

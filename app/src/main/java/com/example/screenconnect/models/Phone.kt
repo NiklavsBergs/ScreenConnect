@@ -1,6 +1,5 @@
 package com.example.screenconnect.models
 
-import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

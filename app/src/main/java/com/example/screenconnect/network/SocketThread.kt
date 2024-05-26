@@ -32,13 +32,12 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
                 val messageType = MessageType.values()[messageTypeOrdinal]
 
                 if (messageType == MessageType.IMAGE){
-                    Log.d("SERVER-RECEIVE","Receiving image")
                     messageReceivedListener.onImageReceived(receiveImage())
                 }
                 else {
-                    Log.d("SERVER-RECEIVE","Receiving info")
                     val message = input.readUTF()
 
+                    // Save Client ID on first message receive
                     if(phoneId == "" && messageType == MessageType.SWIPE){
                         var swipe = Json.decodeFromString<Swipe>(message)
                         phoneId = swipe.phone.id
@@ -58,14 +57,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         }
     }
 
-    fun sendData(data: String) {
-        output.writeUTF(data)
-        output.flush()
-    }
-
     fun sendClientInfo(phone: Phone){
-        Log.d("SERVER-SEND", "Sending...")
-
         try{
             output.writeInt(MessageType.PHONE.ordinal)
 
@@ -74,18 +66,13 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
             output.writeUTF(phoneInfo)
 
             output.flush()
-
-            Log.d("SERVER-SEND-INFO", phoneInfo)
         }
         catch (e: IOException){
-            Log.d("SERVER-SEND-ERROR", e.toString())
+            e.printStackTrace()
         }
-        Log.d("SERVER-SEND-SOCKET-CLOSED", socket.isClosed.toString())
     }
 
     fun sendScreenInfo(screen: VirtualScreen){
-        Log.d("SERVER-SEND", "Sending...")
-
         try{
             output.writeInt(MessageType.SCREEN.ordinal)
 
@@ -94,13 +81,10 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
             output.writeUTF(screenInfo)
 
             output.flush()
-
-            Log.d("SERVER-SEND-INFO", screenInfo)
         }
         catch (e: IOException){
-            Log.d("SERVER-SEND-ERROR", e.toString())
+            e.printStackTrace()
         }
-        Log.d("SERVER-SOCKET-CLOSED", socket.isClosed.toString())
     }
 
     fun sendImage(file: File){
@@ -110,8 +94,6 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         output.writeUTF(file.name)
 
         output.writeLong(file.length())
-
-        Log.d("SERVER-SEND-IMAGE", file.name)
 
         val fileIS = FileInputStream(file)
         val bufferArray = ByteArray(1_000_000)
@@ -133,8 +115,6 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         val fileOutputStream = FileOutputStream(fileToSave)
         val bufferArray = ByteArray(5_000_000)
 
-        Log.d("SERVER-SAVE-IMAGE", fileToSave.path)
-
         while (fileLength > 0) {
             val bytesRead =
                 input.read(bufferArray, 0,
@@ -147,7 +127,6 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
 
         fileOutputStream.flush()
         fileOutputStream.close()
-        Log.d("SERVER-RECEIVE","Image saved")
 
         return fileToSave
     }

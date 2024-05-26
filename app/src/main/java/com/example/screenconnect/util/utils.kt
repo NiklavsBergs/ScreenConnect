@@ -4,19 +4,13 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
-import android.hardware.display.DisplayManager
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.Settings
-import android.util.DisplayMetrics
-import android.util.Log
-import android.view.Display
 import android.view.WindowManager
 import androidx.annotation.RequiresApi
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.example.screenconnect.models.Phone
 import kotlin.system.exitProcess
 
@@ -82,6 +76,7 @@ fun locationPopup(context: Context) {
     builder.create().show()
 }
 
+// Check if location is enabled
 // Concept taken from https://stackoverflow.com/questions/10311834/how-to-check-if-location-services-are-enabled
 fun isLocationEnabled(context: Context): Boolean {
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -89,6 +84,7 @@ fun isLocationEnabled(context: Context): Boolean {
             locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 }
 
+// Get file path from image URI
 // Concept taken from https://stackoverflow.com/questions/13209494/how-to-get-the-full-file-path-from-uri
 fun getRealPathFromUri(uri: Uri, context: Context): String? {
     var filePath: String? = null
