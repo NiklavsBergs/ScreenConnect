@@ -2,16 +2,21 @@ package com.example.screenconnect.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Matrix
 import android.net.Uri
 import android.net.wifi.p2p.WifiP2pDeviceList
 import android.os.Handler
 import android.util.Log
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.scale
 import androidx.lifecycle.ViewModel
+import androidx.navigation.NavController
+import com.example.screenconnect.R
 import com.example.screenconnect.enums.MessageType
 import com.example.screenconnect.enums.SwipeType
 import com.example.screenconnect.models.Phone
@@ -23,11 +28,13 @@ import com.example.screenconnect.network.MessageServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 
@@ -59,14 +66,13 @@ class SharedViewModel() : ViewModel() {
 
     var virtualScreen: VirtualScreen = VirtualScreen()
 
-    var virtualHeight by mutableStateOf(0)
-    var virtualWidth by mutableStateOf(0)
-
     var showImage by mutableStateOf(false)
     var sharedImage by mutableStateOf<Bitmap>(Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888))
 
     private var activePhoto: File? = null
+    var logoBitmap: Bitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888)
 
+    lateinit var navController: NavController
 
     fun sendSwipe(swipe: Swipe){
         if(isConnected){
@@ -79,16 +85,12 @@ class SharedViewModel() : ViewModel() {
                     if(swipe.type == SwipeType.DISCONNECT){
                         virtualScreen.removePhone(thisPhone)
                         thisPhone.position = Position(0,0)
-                        virtualScreen.height = thisPhone.height
-                        virtualScreen.width = thisPhone.width
-
-                        activePhoto?.let { processReceivedImage(it) }
                     }
                     else if (swipe.type == SwipeType.CONNECT){
                         var phoneAdded = virtualScreen.addSwipe(swipe) {
                                 hostUpdated ->
                             thisPhone = hostUpdated.copy()
-                            activePhoto?.let { processReceivedImage(it) }
+                            processReceivedImage(activePhoto)
                         }
 
                         if(phoneAdded){
@@ -111,7 +113,7 @@ class SharedViewModel() : ViewModel() {
         if (isGroupOwner) {
             val changed = virtualScreen.updatePhone(thisPhone){ hostUpdated ->
                 thisPhone = hostUpdated.copy()
-                activePhoto?.let { processReceivedImage(it) }
+                processReceivedImage(activePhoto)
             }
 
             if(changed){
@@ -165,11 +167,19 @@ class SharedViewModel() : ViewModel() {
         isServerRunning = true;
         Log.d("HOST-SERVER", "Starting...")
 
-        messageServer = MessageServer(thisPhone) { message, type ->
+        messageServer = MessageServer(thisPhone,
+            { message, type ->
             // Handle the received message
-
             parseMessageFromClient(message, type)
-        }
+            },
+            { file ->
+                // Handle the received image
+                imageUri = Uri.fromFile(file)
+
+                activePhoto = file
+
+                processReceivedImage(file)
+            })
 
         messageServer.start()
     }
@@ -206,7 +216,6 @@ class SharedViewModel() : ViewModel() {
 
     private fun parseMessageFromServer(type: MessageType, message: String){
 
-
         when(type){
             MessageType.PHONE -> {
                 thisPhone = Json.decodeFromString<Phone>(message)
@@ -215,7 +224,7 @@ class SharedViewModel() : ViewModel() {
             MessageType.SCREEN -> {
                 virtualScreen = Json.decodeFromString<VirtualScreen>(message)
 
-                activePhoto?.let { processReceivedImage(it) }
+                processReceivedImage(activePhoto)
 
                 Log.d("MESSAGE", "Saved ScreenInfo")
             }
@@ -233,22 +242,12 @@ class SharedViewModel() : ViewModel() {
                 if(swipe.type == SwipeType.DISCONNECT){
                     var removedPhone = swipe.phone
                     virtualScreen.removePhone(removedPhone)
-
-                    removedPhone.position = Position(0,0)
-                    removedPhone.rotation = 0
-                    messageServer.sendClientInfo(removedPhone)
-
-                    var tempScreen = VirtualScreen()
-                    tempScreen.height = removedPhone.height
-                    tempScreen.width = removedPhone.width
-
-                    messageServer.sendScreenInfo(tempScreen, removedPhone)
                 }
                 else if(swipe.type == SwipeType.CONNECT){
                     // If the new device gets added returns True
                     var  phoneAdded = virtualScreen.addSwipe(swipe) { hostUpdated ->
                         thisPhone = hostUpdated.copy()
-                        activePhoto?.let { processReceivedImage(it) }
+                        processReceivedImage(activePhoto)
                     }
 
                     if(phoneAdded){
@@ -261,7 +260,7 @@ class SharedViewModel() : ViewModel() {
                 val changed = virtualScreen.updatePhone(phone) { hostUpdated ->
                     Log.d("Host update",  Json.encodeToString(hostUpdated))
                     thisPhone = hostUpdated.copy()
-                    activePhoto?.let { processReceivedImage(it) }
+                    processReceivedImage(activePhoto)
                 }
 
                 if(changed){
@@ -274,10 +273,11 @@ class SharedViewModel() : ViewModel() {
 
     }
 
-    fun processReceivedImage(file: File) {
+    fun processReceivedImage(file: File?) {
         // Decodes the file into a Bitmap and crops it
 
         try {
+            // Makes image the size of the virtual screen
             var bitmap = upscaleAndCropBitmap(file)
 
             Log.d("Phone height", thisPhone.height.toString())
@@ -285,6 +285,7 @@ class SharedViewModel() : ViewModel() {
 
             var position = thisPhone.position
 
+            // Adjust image for devices rotation
             if(thisPhone.rotation != 0){
 
                 var matrix = Matrix()
@@ -302,7 +303,7 @@ class SharedViewModel() : ViewModel() {
             }
 
 
-            // Crop the Bitmap to absolute phone size and location
+            // Crop the Bitmap to absolute device size and location
             var croppedBitmap = Bitmap.createBitmap(
                 bitmap,
                 position.x,
@@ -311,11 +312,13 @@ class SharedViewModel() : ViewModel() {
                 thisPhone.height,
             )
 
-            // Scale to actual phone size
+            // Scale to actual device size
             croppedBitmap = croppedBitmap.scale(thisPhone.widthReal, thisPhone.heightReal)
 
             sharedImage = croppedBitmap
             showImage = true
+
+            //navController.navigate(Screen.SharedScreen.route)
         }
         catch (e: IOException){
             Log.d("IMAGE-SHOW", "ERROR")
@@ -323,36 +326,46 @@ class SharedViewModel() : ViewModel() {
         }
     }
 
-    private fun upscaleAndCropBitmap(file: File): Bitmap {
+    private fun upscaleAndCropBitmap(file: File?): Bitmap {
 
         // Scales and crops image to virtual screen size
+        lateinit var bitmap: Bitmap
 
-        // Get image size without decoding the whole image
-        val options = BitmapFactory.Options()
-        options.inJustDecodeBounds = true
+        if(file == null) {
+            // If there is no image selected, display logo
+            val widthRatio = virtualScreen.width.toFloat() /logoBitmap.width.toFloat()
+            val heightRatio = virtualScreen.height.toFloat() /logoBitmap.width.toFloat()
+            val width = (logoBitmap.width * max(widthRatio, heightRatio)).roundToInt()
+            val height = (logoBitmap.height * max(widthRatio, heightRatio)).roundToInt()
+            bitmap = Bitmap.createScaledBitmap(logoBitmap, width, height, true)
+        }
+        else {
+            // Get image size without decoding the whole image
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
 
-        val fis = FileInputStream(file)
-        BitmapFactory.decodeStream(fis, null, options)
-        fis.close()
+            val fis = FileInputStream(file)
+            BitmapFactory.decodeStream(fis, null, options)
+            fis.close()
 
-        // Get scale factor needed to scale image to screen size
-        val widthRatio = virtualScreen.width.toFloat() / options.outWidth
-        val heightRatio = virtualScreen.height.toFloat() / options.outHeight
-        val scaleFactor = if (widthRatio > heightRatio) widthRatio else heightRatio
+            // Get scale factor needed to scale image to screen size
+            val widthRatio = virtualScreen.width.toFloat() / options.outWidth
+            val heightRatio = virtualScreen.height.toFloat() / options.outHeight
+            val scaleFactor = if (widthRatio > heightRatio) widthRatio else heightRatio
 
-        Log.d("Scale", scaleFactor.toString())
+            Log.d("Scale", scaleFactor.toString())
 
-        // +2 for rounding errors
-        val scaledWidth = (options.outWidth * scaleFactor).toInt() + 2
-        //val scaledHeight = (options.outHeight * scaleFactor).toInt() + 2
+            // +2 for rounding errors
+            val scaledWidth = (options.outWidth * scaleFactor).toInt() + 2
 
-        options.inJustDecodeBounds = false
+            options.inJustDecodeBounds = false
 
-        options.inDensity = options.outWidth
+            options.inDensity = options.outWidth
 
-        options.inTargetDensity = scaledWidth
+            options.inTargetDensity = scaledWidth
 
-        var bitmap = BitmapFactory.decodeFile(file.path, options)
+            bitmap = BitmapFactory.decodeFile(file.path, options)
+        }
 
         Log.d("Bitmap height scaled",  bitmap.height.toString())
         Log.d("Bitmap width scaled", bitmap.width.toString())

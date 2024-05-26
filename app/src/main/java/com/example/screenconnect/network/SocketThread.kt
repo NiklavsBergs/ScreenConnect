@@ -33,7 +33,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
 
                 if (messageType == MessageType.IMAGE){
                     Log.d("SERVER-RECEIVE","Receiving image")
-                    receiveImage()
+                    messageReceivedListener.onImageReceived(receiveImage())
                 }
                 else {
                     Log.d("SERVER-RECEIVE","Receiving info")
@@ -123,7 +123,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         fileIS.close()
     }
 
-    private fun receiveImage(){
+    private fun receiveImage(): File {
 
         val fileName = input.readUTF()
 
@@ -133,7 +133,7 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         val fileOutputStream = FileOutputStream(fileToSave)
         val bufferArray = ByteArray(5_000_000)
 
-        Log.d("CLIENT-SAVE-IMAGE", fileToSave.path)
+        Log.d("SERVER-SAVE-IMAGE", fileToSave.path)
 
         while (fileLength > 0) {
             val bytesRead =
@@ -147,7 +147,9 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
 
         fileOutputStream.flush()
         fileOutputStream.close()
-        Log.d("CLIENT-RECEIVE","Image saved")
+        Log.d("SERVER-RECEIVE","Image saved")
+
+        return fileToSave
     }
 
 }

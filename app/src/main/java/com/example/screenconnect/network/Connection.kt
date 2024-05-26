@@ -31,7 +31,6 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
 
     var channel: WifiP2pManager.Channel? = null
     var receiver: BroadcastReceiver? = null
-    var peerListListener: WifiP2pManager.PeerListListener? = null
 
     init {
         channel = manager?.initialize(context, Looper.getMainLooper(), null)
@@ -77,11 +76,7 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
 
     @SuppressLint("MissingPermission")
     fun startPeerDiscovery() {
-        val tempManager = manager
-
-        if (tempManager == null) {
-            return
-        }
+        val tempManager = manager ?: return
 
         tempManager.discoverPeers(channel, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
@@ -101,11 +96,7 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
     @SuppressLint("MissingPermission")
     fun connectToPeer(device: WifiP2pDevice) {
 
-        val tempManager = manager
-
-        if (tempManager == null) {
-            return
-        }
+        val tempManager = manager ?: return
 
         // Create a WifiP2pConfig object with the device address
         val config = WifiP2pConfig()
@@ -131,11 +122,7 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
     @SuppressLint("MissingPermission")
     fun disconnect() {
 
-        val tempManager = manager
-
-        if (tempManager == null) {
-            return
-        }
+        val tempManager = manager ?: return
 
         if(sharedViewModel.isConnected) {
             Log.d("DISCONNECT", "start")
@@ -166,5 +153,4 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
             sharedViewModel.isServerRunning = false
         }
     }
-
 }

@@ -30,7 +30,6 @@ class VirtualScreen {
             return false
         }
         else{
-
             if(swipes[0].phone.id == swipe.phone.id){
                 swipes.clear()
                 swipes.add(swipe)
@@ -149,17 +148,26 @@ class VirtualScreen {
             val horChange = getGap(updatedPhone.borderHor - phones[index].borderHor)
             val vertChange = getGap(updatedPhone.borderVert - phones[index].borderVert)
 
-            Log.d("UPDATE BEF", "${phones[index].borderHor}")
+            Log.d("HOR", "${phones[index].borderHor}")
+            Log.d("VER", "${ phones[index].borderVert}")
             phones[index].borderHor = updatedPhone.borderHor
             phones[index].borderVert = updatedPhone.borderVert
+
+            if(phones[index].position.x > 0 && phones[index].position.y > 0) {
+                phones[index].position.x += horChange
+                phones[index].position.y += horChange
+            }
+
+            Log.d("HOR AF", "${phones[index].borderHor}")
+            Log.d("VER AF", "${ phones[index].borderVert}")
 
             var host: Phone? = null
 
             for(phone in phones){
-                if (phone.position.x > updatedPhone.position.x){
+                if (phone.position.x >= updatedPhone.position.x){
                     phone.position.x += horChange
                 }
-                if (phone.position.y > updatedPhone.position.y){
+                if (phone.position.y >= updatedPhone.position.y){
                     phone.position.y += vertChange
                 }
 
@@ -306,17 +314,17 @@ class VirtualScreen {
 
         if(abs(rotation) == 90){
             // Adjust B position with rotation
-            change.x = change.x - (centerB.y - centerB.x)
-            change.y = change.y + (centerB.y - centerB.x)
+            change.x -= (centerB.y - centerB.x)
+            change.y += (centerB.y - centerB.x)
             Log.d("Change after ROT", change.toString())
 
             // Adjust B change with rotation
-            changeB = changeB.rotate(rotation)
+            changeB = rotate(changeB, rotation)
             Log.d("ChangeB after ROT", changeB.toString())
         }
         else if(abs(rotation) == 180){
             // Adjust B change with rotation
-            changeB = changeB.rotate(rotation)
+            changeB = rotate(changeB, rotation)
             Log.d("ChangeB after ROT", changeB.toString())
         }
 
@@ -336,6 +344,16 @@ class VirtualScreen {
         updateScreen(posB, phoneB)
 
         return posB
+    }
+
+    private fun rotate(position: Position, rotation: Int): Position{
+        when(rotation){
+            90 -> return(Position(-position.y, position.x))
+            -90 -> return(Position(position.y, -position.x))
+            180 -> return(Position(-position.x, -position.y))
+        }
+
+        return position
     }
 
     private fun getGap(gapMM : Double) : Int {

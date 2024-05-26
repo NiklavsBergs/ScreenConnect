@@ -28,22 +28,7 @@ fun getPhoneInfo(context: Context, windowManager: WindowManager): com.example.sc
 
     val height = displayMetrics.heightPixels
     val width = displayMetrics.widthPixels
-    val xDPI = displayMetrics.xdpi.toInt()
-    val yDPI = displayMetrics.ydpi.toInt()
-
-    val testDPI = displayMetrics.densityDpi
-
-    Log.d("DPI density", displayMetrics.density.toString())
-
-    Log.d("DPI test", testDPI.toString())
-
-    Log.d("DPI X", xDPI.toString())
-    Log.d("DPI Y", yDPI.toString())
-    Log.d("DPI Y/X", ((xDPI+yDPI)/2).toString())
-
-    val DPI = yDPI //(xDPI+yDPI)/2
-
-    Log.d("DPI", DPI.toString())
+    val DPI = displayMetrics.ydpi.toInt()
 
     val name = Build.MANUFACTURER + " " + Build.MODEL;
 
@@ -97,12 +82,14 @@ fun locationPopup(context: Context) {
     builder.create().show()
 }
 
+// Concept taken from https://stackoverflow.com/questions/10311834/how-to-check-if-location-services-are-enabled
 fun isLocationEnabled(context: Context): Boolean {
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
             locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 }
 
+// Concept taken from https://stackoverflow.com/questions/13209494/how-to-get-the-full-file-path-from-uri
 fun getRealPathFromUri(uri: Uri, context: Context): String? {
     var filePath: String? = null
 

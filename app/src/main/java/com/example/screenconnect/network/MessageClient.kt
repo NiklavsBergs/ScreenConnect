@@ -36,8 +36,12 @@ class MessageClient (
 
     var isConnected = false
 
+    val MAX_TRIES = 5
+    var tries = 0
+
     override fun run(){
-        while(!isConnected){
+        // Try to connect to server, abort if fail 5 times
+        while(!isConnected && tries < MAX_TRIES){
             try {
                 socket.connect(InetSocketAddress(host, 8888), 5000)
 
@@ -51,14 +55,16 @@ class MessageClient (
 
                 Log.d("CLIENT-START",host)
 
+                tries++
             } catch (e: IOException) {
-                Log.d("CLIENT-START", "ERROR")
                 e.printStackTrace()
+                tries++
             }
         }
         readMessages()
     }
 
+    // If connected successfully, read messages from server while connection active
     private fun readMessages(){
         val tempSocketDIS = socketDIS ?: return
         while(!socket.isClosed){

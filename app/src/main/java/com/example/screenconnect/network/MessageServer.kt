@@ -24,10 +24,11 @@ import java.net.Socket
 
 class MessageServer (
     private val thisPhone: Phone,
-    private val messageReceivedCallback: (String, MessageType) -> Unit
+    private val messageReceivedCallback: (String, MessageType) -> Unit,
+    private val imageeReceivedCallback: (File) -> Unit
     ) : Thread(), MessageReceivedListener{
 
-    private val connectLimit = 10
+    private val connectLimit = 20
     private val socketThreads = mutableListOf<SocketThread>()
     var serverSocket: ServerSocket? = null
 
@@ -50,6 +51,11 @@ class MessageServer (
 
     override fun onMessageReceived(message: String, type: MessageType){
         messageReceivedCallback(message, type)
+    }
+
+    override fun onImageReceived(file: File) {
+        sendImage(file)
+        imageeReceivedCallback(file)
     }
 
     fun updateClientInfo(screen: VirtualScreen){

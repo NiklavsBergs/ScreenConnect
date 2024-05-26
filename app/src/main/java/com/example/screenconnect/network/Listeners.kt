@@ -5,6 +5,7 @@ import java.io.File
 
 interface MessageReceivedListener {
     fun onMessageReceived(message: String, type: MessageType)
+    fun onImageReceived(file: File)
 }
 
 interface ImageReceivedListener {

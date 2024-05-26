@@ -74,6 +74,7 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
         val yIntercept = start.y - slope * start.x
 
         if(abs(diffX) > abs(diffY) && abs(diffX) > MIN_SWIPE){
+            // Swipe is horizontal
             if(end.x < start.x && end.x < BORDER_VERT){
                 edge = Edge.LEFT
                 type = SwipeType.CONNECT
@@ -88,6 +89,7 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
             }
         }
         else if(abs(diffY) > abs(diffX) && abs(diffY) > MIN_SWIPE){
+            // Swipe is vertical
             if(end.y < start.y && end.y < BORDER_HOR){
                 edge = Edge.TOP
                 type = SwipeType.CONNECT
