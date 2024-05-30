@@ -288,6 +288,12 @@ class VirtualScreen {
     }
     private fun updateScreen(posB: Position, phoneB: Phone){
         // Check if phone B goes outside screen, if it does, update screen
+
+        // If the new phone goes outside the screen with a negative position value,
+        // and all phones are shifter by the value and new phone takes position value 0
+
+        // If the new phone goes outside the screen with a positive position value,
+        // it keeps the position and virtual screen size is adjusted
         if(kotlin.math.abs(phoneB.rotation) == 90){
             if (posB.x < 0){
                 // Add difference to screen width

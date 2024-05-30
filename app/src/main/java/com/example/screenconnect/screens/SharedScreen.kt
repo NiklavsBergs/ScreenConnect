@@ -108,7 +108,7 @@ fun SharedScreen(
     Box(modifier = Modifier
         .fillMaxSize()
         .pointerInput(Unit) {
-            // Detects swipe events on screen
+            // Detects swipe events on screen, https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures
             detectDragGestures(onDragStart = { offset ->
                 initialPosition.value = offset
                 isDragging = true
@@ -125,8 +125,6 @@ fun SharedScreen(
                         showBottomSheet = true
                     }
 
-                    Log.d("DRAG", "End")
-
                     var swipe =
                         Swipe(initialPosition.value, endPosition.value, sharedViewModel.thisPhone)
                     sharedViewModel.sendSwipe(swipe)
@@ -134,7 +132,6 @@ fun SharedScreen(
                         sharedViewModel.showImage = false
                         navController.popBackStack()
                     }
-                    Log.d("SWIPE-END", endPosition.value.toString())
 
                     dragX = 0.0
                     dragY = 0.0
@@ -165,8 +162,6 @@ fun SharedScreen(
                             endPosition.value,
                             sharedViewModel.thisPhone
                         )
-                        Log.d("DRAG", "Out of bounds")
-                        Log.d("SWIPE-END", endPosition.value.toString())
                         sharedViewModel.sendSwipe(swipe)
 
                         isDragging = false

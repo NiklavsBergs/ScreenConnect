@@ -125,7 +125,6 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                             initialPosition.value.x + dragX.toFloat(),
                             initialPosition.value.y + dragY.toFloat()
                         )
-                        Log.d("DRAG", "End")
 
                         var swipe = Swipe(
                             initialPosition.value,
@@ -133,7 +132,6 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                             sharedViewModel.thisPhone
                         )
                         sharedViewModel.sendSwipe(swipe)
-                        Log.d("SWIPE-END", endPosition.value.toString())
 
                         dragX = 0.0
                         dragY = 0.0
@@ -164,14 +162,11 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                             endPosition.value,
                             sharedViewModel.thisPhone
                         )
-                        Log.d("DRAG", "Out of bounds")
-                        Log.d("SWIPE-END", endPosition.value.toString())
                         sharedViewModel.sendSwipe(swipe)
                         isDragging = false
                     }
                 }
             }
-
         }) {
 
         statusBar(sharedViewModel.infoText)
@@ -277,7 +272,9 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                 Image(
                     painter = painterResource(id = R.drawable.pinch),
                     contentDescription = "Ready to connect",
-                    alpha = 0.4F
+                    alpha = 0.4F,
+                    modifier = Modifier
+                        .padding(top = 80.dp)
                 )
 
                 Spacer(modifier = Modifier.weight(1f))

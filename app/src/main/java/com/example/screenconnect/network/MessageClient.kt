@@ -124,7 +124,7 @@ class MessageClient (
         tempSocketDOS.writeLong(file.length())
 
         val fileIS = FileInputStream(file)
-        val bufferArray = ByteArray(5_000_000)
+        val bufferArray = ByteArray(2_000_000)
         var lengthRead: Int
 
         while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {

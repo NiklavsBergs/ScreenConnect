@@ -87,7 +87,6 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
 
     @SuppressLint("MissingPermission")
     fun connectToPeer(device: WifiP2pDevice) {
-
         val tempManager = manager ?: return
 
         // Create a WifiP2pConfig object with the device address
@@ -95,8 +94,7 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
         config.deviceAddress = device.deviceAddress
 
         tempManager.connect(channel, config, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-            }
+            override fun onSuccess() {}
 
             override fun onFailure(reason: Int) {
                 // Handle connection failure
