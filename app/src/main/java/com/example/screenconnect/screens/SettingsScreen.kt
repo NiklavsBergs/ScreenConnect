@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.screenconnect.R
+import com.example.screenconnect.components.BulletList
 import com.example.screenconnect.components.numberSelect
 import com.example.screenconnect.components.statusBar
 import com.example.screenconnect.models.Swipe
@@ -262,6 +263,17 @@ fun SettingsScreen(navController: NavController, sharedViewModel: SharedViewMode
                                 Icon(Icons.Outlined.Close, contentDescription = "Close sheet")
                             }
                         }
+
+                        BulletList(
+                            items = listOf(
+                                "To connect devices, click 'Discover Peers', then click on a device",
+                                "To connect screens dp the shown action with two fingers",
+                                "To disconnect screen, pull right from the left side of the screen (→)",
+                                "To show options and navigation bar when in connected screen, pull up from the bottom of the screen (↑)",
+                            ),
+                            modifier = Modifier.padding(24.dp),
+                            lineSpacing = 8.dp
+                        )
                     }
                 }
 

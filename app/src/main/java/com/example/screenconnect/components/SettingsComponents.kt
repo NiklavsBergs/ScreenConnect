@@ -3,9 +3,12 @@ package com.example.screenconnect.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
@@ -19,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -80,6 +84,34 @@ fun numberSelect(value : Double, title : String,  onPlus: () -> Unit, onMinus: (
                 .align(alignment = Alignment.CenterHorizontally)
         ) {
             Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Decrease")
+        }
+    }
+}
+
+@Composable
+fun BulletList(
+    modifier: Modifier = Modifier,
+    indent: Dp = 20.dp,
+    lineSpacing: Dp = 0.dp,
+    items: List<String>,
+) {
+    Column(modifier = modifier) {
+        items.forEach {
+            Row {
+                Text(
+                    text = "\u2022",
+                    modifier = Modifier.width(indent),
+                    fontSize = 30.sp
+                )
+                Text(
+                    text = it,
+                    modifier = Modifier.weight(1f, fill = true),
+                    fontSize = 18.sp
+                )
+            }
+            if (lineSpacing > 0.dp && it != items.last()) {
+                Spacer(modifier = Modifier.height(lineSpacing))
+            }
         }
     }
 }
