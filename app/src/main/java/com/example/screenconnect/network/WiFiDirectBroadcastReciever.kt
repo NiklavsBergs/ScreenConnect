@@ -14,18 +14,15 @@ class WiFiDirectBroadcastReceiver(private val manager: WifiP2pManager?, private 
 
     @SuppressLint("MissingPermission")
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d("WIFI_DIRECT", "Received broadcast: ${intent.action}")
 
         when(intent.action) {
             WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
-                // Determine if Wi-Fi Direct mode is enabled or not, alert
-                // the Activity.
+                // Determine if Wi-Fi Direct is enabled or not
                 val state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
-                Log.d("WIFI_DIRECT", "Wi-Fi Direct state changed: $state")
                 sharedViewModel.isWifiEnabled = state == WifiP2pManager.WIFI_P2P_STATE_ENABLED
             }
             WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
-                Log.d("WIFI_DIRECT", "Peers changed")
+                // Available device list changed, update it in UI
                 manager?.requestPeers(channel) { peers: WifiP2pDeviceList? ->
                     peers?.let { sharedViewModel.peerList = it }
                     if(peers?.deviceList?.isNotEmpty() == true && !sharedViewModel.isConnected){
@@ -39,12 +36,12 @@ class WiFiDirectBroadcastReceiver(private val manager: WifiP2pManager?, private 
 
             }
             WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
+                // WiFi Direct connection changes (connect or disconnect)
                 val networkInfo: WifiP2pInfo? = intent
                     .getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO) as WifiP2pInfo?
 
                 if (networkInfo?.groupFormed == true) {
                     // Connection is established
-                    Log.d("WIFI_DIRECT", "Connection established")
                     sharedViewModel.isGroupOwner = networkInfo?.isGroupOwner == true
                     sharedViewModel.isConnected = true
                     sharedViewModel.connectedDeviceName = networkInfo?.groupOwnerAddress.toString()
@@ -53,27 +50,21 @@ class WiFiDirectBroadcastReceiver(private val manager: WifiP2pManager?, private 
                     if(sharedViewModel.isGroupOwner){
                         sharedViewModel.infoText = "Host"
                         sharedViewModel.thisPhone.isHost = true
-                        Log.d("WIFI_DIRECT", "Host")
                     }
                     else{
                         sharedViewModel.infoText = "Connected"
                     }
 
-
                 } else {
                     // Connection is lost
                     sharedViewModel.connectedDeviceName = ""
                     sharedViewModel.infoText = "Not connected"
+                    sharedViewModel.isConnected = false
                     connection.disconnect()
                 }
 
             }
-            WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
-//                val device = intent.getParcelableExtra<WifiP2pDevice>(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)
-//
-//                // Assuming 'thisDevice' is a state variable holding the current device details
-//                acticity.thisDevice = device
-            }
+            WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {}
         }
     }
 

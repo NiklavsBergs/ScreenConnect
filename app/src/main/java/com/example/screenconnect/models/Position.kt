@@ -2,7 +2,6 @@ package com.example.screenconnect.models
 
 import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
-import java.lang.Math.abs
 import kotlin.math.roundToInt
 
 @Serializable

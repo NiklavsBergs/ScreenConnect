@@ -16,13 +16,14 @@ import com.example.screenconnect.network.Connection
 @Composable
 fun Navigation(sharedViewModel: SharedViewModel, connection: Connection) {
     val navController = rememberNavController()
+
     NavHost(navController = navController, startDestination = Screen.SettingsScreen.route){
         composable(route = Screen.SettingsScreen.route){
             SettingsScreen(navController, sharedViewModel, connection)
         }
 
         composable(route = Screen.SharedScreen.route){
-            SharedScreen(navController, sharedViewModel)
+            SharedScreen(navController, sharedViewModel, connection)
         }
     }
 }

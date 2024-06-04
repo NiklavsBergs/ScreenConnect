@@ -39,7 +39,6 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
     init {
         if(connectionPoint.x == -1){
             connectionPoint = calculateEdgeIntersection()
-            Log.d("SWIPE", Json.encodeToString(this))
         }
     }
 
@@ -53,6 +52,13 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
     }
 
     private fun calculateEdgeIntersection(): Position {
+        // Get the point where swipe meets the edge of the screen
+
+        // Calculated by getting the cross point of a line that starts at the swipe start point
+        // and goes through the swipe end point, and an edge of the screen
+
+        // Could also just use the end point of swipe and closest edge to it, more similar to https://github.com/paulsonnentag/swip
+        // This was made in an effort to make it a little more precise than Swip.js solution
 
         if(isDisconnectSwipe()){
             type = SwipeType.DISCONNECT
@@ -71,34 +77,37 @@ class Swipe(@Serializable(with = OffsetSerializer::class) val start: Offset, @Se
             slope = -100F
         }
 
-        val yIntercept = start.y - slope * start.x
+        // Need to scale, because it is calculated from swipe start point, which has not been normalized yet
+        val yIntercept = (start.y - slope * start.x) * phone.scaleFactor
 
         if(abs(diffX) > abs(diffY) && abs(diffX) > MIN_SWIPE){
+            // Swipe is horizontal
             if(end.x < start.x && end.x < BORDER_VERT){
                 edge = Edge.LEFT
                 type = SwipeType.CONNECT
 
-                return Position(0, (yIntercept * phone.scaleFactor).roundToInt())
+                return Position(0, (yIntercept).roundToInt())
             }
             else if(end.x > start.x && end.x > phone.width -  BORDER_VERT){
                 edge = Edge.RIGHT
                 type = SwipeType.CONNECT
 
-                return Position(phone.width, ((phone.width*slope + yIntercept) * phone.scaleFactor).roundToInt() )
+                return Position(phone.width, (phone.width*slope + yIntercept).roundToInt() )
             }
         }
         else if(abs(diffY) > abs(diffX) && abs(diffY) > MIN_SWIPE){
+            // Swipe is vertical
             if(end.y < start.y && end.y < BORDER_HOR){
                 edge = Edge.TOP
                 type = SwipeType.CONNECT
 
-                return Position((abs(yIntercept)/abs(slope) * phone.scaleFactor).roundToInt(), 0)
+                return Position((abs(yIntercept)/abs(slope)).roundToInt(), 0)
             }
             else if(end.y > start.y && end.y > phone.height -  BORDER_HOR) {
                 edge = Edge.BOTTOM
                 type = SwipeType.CONNECT
 
-                return Position(((phone.height-yIntercept)/slope * phone.scaleFactor).roundToInt(), phone.height)
+                return Position(((phone.height-yIntercept)/slope).roundToInt(), phone.height)
             }
         }
         

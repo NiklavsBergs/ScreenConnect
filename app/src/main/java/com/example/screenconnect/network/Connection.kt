@@ -7,31 +7,26 @@ import android.content.IntentFilter
 import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pManager
-import android.os.Build
 import android.os.Looper
 import android.util.Log
-import android.widget.Toast
-import androidx.annotation.RequiresApi
-import com.example.screenconnect.MainActivity
 import com.example.screenconnect.screens.SharedViewModel
 
-
+// Handles WiFi Direct communication between devices, https://developer.android.com/develop/connectivity/wifi/wifip2p
 class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
 
-    val intentFilter = IntentFilter().apply {
+    private val intentFilter = IntentFilter().apply {
         addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
         addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
         addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
         addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
     }
 
-    val manager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
+    private val manager: WifiP2pManager? by lazy(LazyThreadSafetyMode.NONE) {
         context.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
     }
 
-    var channel: WifiP2pManager.Channel? = null
-    var receiver: BroadcastReceiver? = null
-    var peerListListener: WifiP2pManager.PeerListListener? = null
+    private var channel: WifiP2pManager.Channel? = null
+    private var receiver: BroadcastReceiver? = null
 
     init {
         channel = manager?.initialize(context, Looper.getMainLooper(), null)
@@ -66,8 +61,6 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
                     sharedViewModel.infoText = "Connected"
                 }
 
-                Log.d("HOST-ADDRESS", info.groupOwnerAddress.hostAddress)
-
             } else {
                 sharedViewModel.isConnected = false
                 sharedViewModel.connectedDeviceName = ""
@@ -77,53 +70,36 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
 
     @SuppressLint("MissingPermission")
     fun startPeerDiscovery() {
-        val tempManager = manager
-
-        if (tempManager == null) {
-            return
-        }
+        val tempManager = manager ?: return
 
         tempManager.discoverPeers(channel, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 sharedViewModel.infoText = "Discovery started"
                 sharedViewModel.isDiscovering = false
-                Log.d("DISCOVERY", "Success")
             }
 
             override fun onFailure(reasonCode: Int) {
                 sharedViewModel.infoText = "Discovery failed"
                 sharedViewModel.isDiscovering = false
-                Log.d("DISCOVERY-ERROR", reasonCode.toString())
             }
         })
     }
 
     @SuppressLint("MissingPermission")
     fun connectToPeer(device: WifiP2pDevice) {
-
-        val tempManager = manager
-
-        if (tempManager == null) {
-            return
-        }
+        val tempManager = manager ?: return
 
         // Create a WifiP2pConfig object with the device address
         val config = WifiP2pConfig()
         config.deviceAddress = device.deviceAddress
 
-        val name = device.deviceName
-
         tempManager.connect(channel, config, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-                Log.d("CONNECT", "Connected to : $name")
-            }
+            override fun onSuccess() {}
 
             override fun onFailure(reason: Int) {
                 // Handle connection failure
                 sharedViewModel.isConnected = false
                 sharedViewModel.connectedDeviceName = ""
-
-                Log.d("CONNECTION-ERROR", reason.toString())
             }
         })
     }
@@ -131,40 +107,27 @@ class Connection(val context: Context, val sharedViewModel: SharedViewModel) {
     @SuppressLint("MissingPermission")
     fun disconnect() {
 
-        val tempManager = manager
-
-        if (tempManager == null) {
-            return
-        }
+        val tempManager = manager ?: return
 
         if(sharedViewModel.isConnected) {
-            Log.d("DISCONNECT", "start")
 
             tempManager.requestGroupInfo(channel,
                 WifiP2pManager.GroupInfoListener { group ->
                     tempManager.removeGroup(channel, object : WifiP2pManager.ActionListener {
                         override fun onSuccess() {
-                            Log.d("DISCONNECT", "Success")
-                        }
+                            if (sharedViewModel.isGroupOwner) {
+                                sharedViewModel.messageServer.close()
+                                sharedViewModel.isGroupOwner = false
+                            } else {
+                                sharedViewModel.messageClient.close()
+                            }
 
-                        override fun onFailure(reason: Int) {
-                            Log.d("DISCONNECT-ERROR", reason.toString())
+                            sharedViewModel.isConnected = false
+                            sharedViewModel.isServerRunning = false
                         }
+                        override fun onFailure(reason: Int) {}
                     })
                 })
-
-            if (sharedViewModel.isGroupOwner) {
-                sharedViewModel.messageServer.close()
-                Log.d("DISCONNECT", "Server closed")
-            } else {
-                sharedViewModel.messageClient.close()
-                Log.d("DISCONNECT", "Client closed")
-            }
-
-            sharedViewModel.isGroupOwner = false
-            sharedViewModel.isConnected = false
-            sharedViewModel.isServerRunning = false
         }
     }
-
 }

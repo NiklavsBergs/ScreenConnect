@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.Swipe
 import com.example.screenconnect.models.VirtualScreen
+import com.example.screenconnect.enums.MessageType
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedInputStream
@@ -17,7 +18,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.net.Socket
 
-class SocketThread(private val socket: Socket, private val messageReceivedListener: MessageReceivedListener?) : Thread() {
+class SocketThread(private val socket: Socket, private val messageReceivedListener: MessageReceivedListener) : Thread() {
 
     var phoneId = ""
 
@@ -27,22 +28,22 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
     override fun run() {
         try {
             while (!socket.isClosed) {
-                val type = input.readUTF()
+                val messageTypeOrdinal = input.readInt()
+                val messageType = MessageType.values()[messageTypeOrdinal]
 
-                if(type?.compareTo("Info") == 0) {
-                    Log.d("SERVER-RECEIVE","Receiving info")
+                if (messageType == MessageType.IMAGE){
+                    messageReceivedListener.onImageReceived(receiveImage())
+                }
+                else {
                     val message = input.readUTF()
 
-                    if(phoneId == ""){
+                    // Save Client ID on first message receive
+                    if(phoneId == "" && messageType == MessageType.SWIPE){
                         var swipe = Json.decodeFromString<Swipe>(message)
                         phoneId = swipe.phone.id
                     }
 
-                    messageReceivedListener?.onMessageReceived(message)
-                }
-                else if (type?.compareTo("Image") == 0){
-                    Log.d("SERVER-RECEIVE","Receiving image")
-                    receiveImage()
+                    messageReceivedListener.onMessageReceived(message, messageType)
                 }
             }
         } catch (e: IOException) {
@@ -56,76 +57,55 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         }
     }
 
-    fun sendData(data: String) {
-        output.writeUTF(data)
-        output.flush()
-    }
-
     fun sendClientInfo(phone: Phone){
-        Log.d("SERVER-SEND", "Sending...")
-
         try{
-            output.writeUTF("Info")
+            output.writeInt(MessageType.PHONE.ordinal)
 
-            var phoneInfo = "PhoneInfo*" + Json.encodeToString(phone)
+            val phoneInfo = Json.encodeToString(phone)
 
             output.writeUTF(phoneInfo)
 
             output.flush()
-
-            Log.d("SERVER-SEND-INFO", phoneInfo)
         }
         catch (e: IOException){
-            Log.d("SERVER-SEND-ERROR", e.toString())
+            e.printStackTrace()
         }
-        Log.d("SERVER-SEND-SOCKET-CLOSED", socket?.isClosed.toString())
     }
 
     fun sendScreenInfo(screen: VirtualScreen){
-        Log.d("SERVER-SEND", "Sending...")
-
         try{
-            output.writeUTF("Info")
+            output.writeInt(MessageType.SCREEN.ordinal)
 
-            //var screenInfo = "ScreenInfo:" + screen.vHeight + "," + screen.vWidth + "," + screen.DPI
-            var screenInfo = "ScreenInfo*" + Json.encodeToString(screen)
-            //var screenInfo = Json.encodeToString(screen)
+            val screenInfo = Json.encodeToString(screen)
 
             output.writeUTF(screenInfo)
 
             output.flush()
-
-            Log.d("SERVER-SEND-INFO", screenInfo)
         }
         catch (e: IOException){
-            Log.d("SERVER-SEND-ERROR", e.toString())
+            e.printStackTrace()
         }
-        Log.d("SERVER-SOCKET-CLOSED", socket?.isClosed.toString())
     }
 
     fun sendImage(file: File){
 
-        if(output != null) {
-            output.writeUTF("Image")
+        output.writeInt(MessageType.IMAGE.ordinal)
 
-            output.writeUTF(file.name)
+        output.writeUTF(file.name)
 
-            output.writeLong(file.length())
+        output.writeLong(file.length())
 
-            Log.d("SERVER-SEND-IMAGE", file.name)
+        val fileIS = FileInputStream(file)
+        val bufferArray = ByteArray(1_000_000)
+        var lengthRead: Int
 
-            val fileIS = FileInputStream(file)
-            val bufferArray = ByteArray(5_000_000)
-            var lengthRead: Int
-
-            while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
-                output.write(bufferArray, 0, lengthRead)
-            }
-            fileIS.close()
+        while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
+            output.write(bufferArray, 0, lengthRead)
         }
+        fileIS.close()
     }
 
-    private fun receiveImage(){
+    private fun receiveImage(): File {
 
         val fileName = input.readUTF()
 
@@ -135,23 +115,20 @@ class SocketThread(private val socket: Socket, private val messageReceivedListen
         val fileOutputStream = FileOutputStream(fileToSave)
         val bufferArray = ByteArray(5_000_000)
 
-        Log.d("CLIENT-SAVE-IMAGE", fileToSave.path)
-
-        if(fileLength != null) {
-            while (fileLength > 0) {
-                val bytesRead =
-                    input.read(bufferArray, 0,
-                        Integer.min(fileLength.toInt(), bufferArray.size)
-                    )
-                if (bytesRead == -1) break
-                fileOutputStream.write(bufferArray, 0, bytesRead!!)
-                fileLength -= bytesRead!!
-            }
+        while (fileLength > 0) {
+            val bytesRead =
+                input.read(bufferArray, 0,
+                    Integer.min(fileLength.toInt(), bufferArray.size)
+                )
+            if (bytesRead == -1) break
+            fileOutputStream.write(bufferArray, 0, bytesRead)
+            fileLength -= bytesRead
         }
 
         fileOutputStream.flush()
         fileOutputStream.close()
-        Log.d("CLIENT-RECEIVE","Image saved")
+
+        return fileToSave
     }
 
 }

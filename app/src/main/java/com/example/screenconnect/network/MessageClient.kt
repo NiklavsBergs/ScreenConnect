@@ -1,11 +1,10 @@
 package com.example.screenconnect.network
 
-import android.os.Build
 import android.os.Environment
 import android.util.Log
 import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.Swipe
-import com.example.screenconnect.screens.SharedViewModel
+import com.example.screenconnect.enums.MessageType
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedInputStream
@@ -22,9 +21,10 @@ import java.lang.Integer.min
 import java.net.InetSocketAddress
 import java.net.Socket
 
+// Server/Client structure inspired by https://github.com/stlong0521/wifi-direct-group
 class MessageClient (
     private val host: String,
-    private val messageReceivedCallback: (String) -> Unit,
+    private val messageReceivedCallback: (MessageType, String) -> Unit,
     private val imageReceivedCallback: (File) -> Unit
 ) : Thread(){
 
@@ -37,122 +37,105 @@ class MessageClient (
 
     var isConnected = false
 
-    override fun run(){
-        Log.d("HOST",host)
+    private val MAX_TRIES = 5
+    private var tries = 0
 
-        while(!isConnected){
+    override fun run(){
+        // Try to connect to server, abort if fail 5 times
+        while(!isConnected && tries < MAX_TRIES){
             try {
-                socket?.connect(InetSocketAddress(host, 8888), 5000)
-                inputStream = socket?.getInputStream()
-                outputStream = socket?.getOutputStream()
+                socket.connect(InetSocketAddress(host, 8888), 5000)
+
+                inputStream = socket.getInputStream()
+                outputStream = socket.getOutputStream()
 
                 socketDOS = DataOutputStream(BufferedOutputStream(outputStream))
                 socketDIS = DataInputStream(BufferedInputStream(inputStream))
 
                 isConnected = true
-
-                Log.d("CLIENT-START",host)
-
             } catch (e: IOException) {
-                Log.d("CLIENT-START", "ERROR")
                 e.printStackTrace()
-                isConnected = false
+                tries++
             }
         }
+        readMessages()
+    }
 
-        while(socket!=null  && !socket!!.isClosed){
+    // If connected successfully, read messages from server while connection active
+    private fun readMessages(){
+        val tempSocketDIS = socketDIS ?: return
+        while(!socket.isClosed){
             try{
 
-                val type = socketDIS?.readUTF()
+                val messageTypeOrdinal = tempSocketDIS.readInt()
+                val messageType = MessageType.values()[messageTypeOrdinal]
 
-                if(type?.compareTo("Info") == 0) {
-                    Log.d("CLIENT-RECEIVE","Receiving info")
-                    val message = socketDIS?.readUTF()
-                    messageReceivedCallback(message!!)
-                }
-                else if (type?.compareTo("Image") == 0){
-                    Log.d("CLIENT-RECEIVE","Receiving image")
+                if (messageType == MessageType.IMAGE){
                     val savedFile = receiveImage()
                     imageReceivedCallback(savedFile)
                 }
+                else {
+                    val message = tempSocketDIS.readUTF()
+                    messageReceivedCallback(messageType, message)
+                }
 
             } catch (e: IOException) {
-                Log.d("CLIENT-RECEIVE", "ERROR")
                 e.printStackTrace()
                 socket.close()
             }
 
-            }
-            Log.d("CLIENT-RECEIVE-END", "ENDED")
-
+        }
     }
 
     fun sendPhoneInfo(phone: Phone){
+        val tempSocketDOS = socketDOS ?: return
         try{
-            if(socketDOS != null) {
-                socketDOS!!.writeUTF("Info")
+            tempSocketDOS.writeInt(MessageType.PHONE.ordinal)
 
-                var phoneInfo = Json.encodeToString(phone)
+            var phoneInfo = Json.encodeToString(phone)
 
-                socketDOS!!.writeUTF(phoneInfo)
-
-                socketDOS!!.flush()
-
-                Log.d("CLIENT-SEND-INFO", phoneInfo)
-            }
+            tempSocketDOS.writeUTF(phoneInfo)
+            tempSocketDOS.flush()
         }
         catch (e: IOException){
-            Log.d("CLIENT-SEND", "ERROR")
             e.printStackTrace()
         }
     }
 
     fun sendSwipe(swipe: Swipe){
+        val tempSocketDOS = socketDOS ?: return
         try{
-            if(socketDOS != null) {
-                socketDOS!!.writeUTF("Info")
+            tempSocketDOS.writeInt(MessageType.SWIPE.ordinal)
 
-                var swipe = Json.encodeToString(swipe)
-
-                Log.d("CLIENT-SEND-SWIPE", swipe)
-
-                socketDOS!!.writeUTF(swipe)
-
-                socketDOS!!.flush()
-            }
+            var swipe = Json.encodeToString(swipe)
+            tempSocketDOS.writeUTF(swipe)
+            tempSocketDOS.flush()
         }
         catch (e: IOException){
-            Log.d("CLIENT-SEND", "ERROR")
             e.printStackTrace()
         }
     }
 
     fun sendImage(file: File){
+        val tempSocketDOS = socketDOS ?: return
 
-        if(socketDOS != null) {
-            socketDOS!!.writeUTF("Image")
+        tempSocketDOS.writeInt(MessageType.IMAGE.ordinal)
+        tempSocketDOS.writeUTF(file.name)
+        tempSocketDOS.writeLong(file.length())
 
-            socketDOS!!.writeUTF(file.name)
+        val fileIS = FileInputStream(file)
+        val bufferArray = ByteArray(2_000_000)
+        var lengthRead: Int
 
-            socketDOS!!.writeLong(file.length())
-
-            Log.d("CLIENT-SEND-IMAGE", file.name)
-
-            val fileIS = FileInputStream(file)
-            val bufferArray = ByteArray(5_000_000)
-            var lengthRead: Int
-
-            while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
-                socketDOS!!.write(bufferArray, 0, lengthRead)
-            }
-            fileIS.close()
+        while (fileIS.read(bufferArray).also { lengthRead = it } > 0) {
+            tempSocketDOS.write(bufferArray, 0, lengthRead)
         }
+        fileIS.close()
     }
 
     private fun receiveImage(): File{
 
         val fileName = socketDIS?.readUTF()
-
         var fileLength = socketDIS?.readLong()
 
         val fileToSave = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath, fileName)
@@ -160,21 +143,18 @@ class MessageClient (
         val fileOutputStream = FileOutputStream(fileToSave)
         val bufferArray = ByteArray(5_000_000)
 
-        Log.d("CLIENT-SAVE-IMAGE", fileToSave.path)
-
         if(fileLength != null) {
             while (fileLength > 0) {
                 val bytesRead =
                     socketDIS?.read(bufferArray, 0, min(fileLength.toInt(), bufferArray.size))
                 if (bytesRead == -1) break
                 fileOutputStream.write(bufferArray, 0, bytesRead!!)
-                fileLength -= bytesRead!!
+                fileLength -= bytesRead
             }
         }
 
         fileOutputStream.flush()
         fileOutputStream.close()
-        Log.d("CLIENT-RECEIVE","Image saved")
 
         return fileToSave
     }
@@ -182,10 +162,8 @@ class MessageClient (
 
     fun close() {
         try {
-            socket?.close()
-            Log.e("CLIENT-CLOSE", "Closed")
+            socket.close()
         } catch (e: IOException) {
-            Log.e("CLIENT-CLOSE", "ERROR")
             e.printStackTrace()
         }
     }

@@ -1,32 +1,20 @@
 package com.example.screenconnect.network
 
-import android.os.Environment
-import android.util.Log
+import com.example.screenconnect.enums.MessageType
 import com.example.screenconnect.models.Phone
 import com.example.screenconnect.models.VirtualScreen
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
 import java.net.ServerSocket
-import java.net.Socket
 
+// Server/Client structure inspired by https://github.com/stlong0521/wifi-direct-group
 class MessageServer (
     private val thisPhone: Phone,
-    private val messageReceivedCallback: (String) -> Unit
+    private val messageReceivedCallback: (String, MessageType) -> Unit,
+    private val imageeReceivedCallback: (File) -> Unit
     ) : Thread(), MessageReceivedListener{
 
-    private val connectLimit = 10
+    private val connectLimit = 20
     private val socketThreads = mutableListOf<SocketThread>()
     var serverSocket: ServerSocket? = null
 
@@ -47,8 +35,13 @@ class MessageServer (
         }
     }
 
-    override fun onMessageReceived(message: String){
-        messageReceivedCallback(message)
+    override fun onMessageReceived(message: String, type: MessageType){
+        messageReceivedCallback(message, type)
+    }
+
+    override fun onImageReceived(file: File) {
+        sendImage(file)
+        imageeReceivedCallback(file)
     }
 
     fun updateClientInfo(screen: VirtualScreen){

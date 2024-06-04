@@ -3,6 +3,7 @@ package com.example.screenconnect.models
 import android.util.Log
 import com.example.screenconnect.enums.Edge
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import java.lang.Math.abs
 import java.time.Duration
 import java.time.LocalTime
@@ -11,13 +12,13 @@ import java.time.LocalTime
 class VirtualScreen {
     var height: Int = 0
     var width: Int = 0
-    var phones = mutableListOf<Phone>()
 
-    var DPI: Int = 0
+    @Transient var phones = mutableListOf<Phone>()
+    @Transient val DPI: Int = 400
+    @Transient private var swipes = mutableListOf<Swipe>()
+    @Transient val GAP = 67
 
-    private var swipes = mutableListOf<Swipe>()
-
-    val GAP = 67
+    val mmToInch = 0.0393
 
     fun addSwipe(swipe: Swipe, hostChangeCallback: (Phone) -> Unit): Boolean{
 
@@ -29,29 +30,27 @@ class VirtualScreen {
             return false
         }
         else{
-
+            // Check if swipes are not from the same phone
             if(swipes[0].phone.id == swipe.phone.id){
                 swipes.clear()
                 swipes.add(swipe)
-
-                Log.d("ID CHECK", "Both swipes are from the same phone")
 
                 return false
             }
 
             val difference = Duration.between(swipes[0].time, swipe.time)
 
+            // Check if swipe time difference is smaller than 500ms
             if(difference.toMillis() > 500){
                 swipes.clear()
                 swipes.add(swipe)
-
-                Log.d("TIME CHECK", "Time difference too big")
 
                 return false
             }
 
             swipes.add(swipe)
 
+            // Check if there are invalid swipes
             for(swipe in swipes){
                 if (swipe.edge == Edge.NONE){
                     swipes.clear()
@@ -59,6 +58,13 @@ class VirtualScreen {
                 }
             }
 
+            // Cancel new connection if both devices are in virtual screen, and there are more than 2 devices
+            if(phones.size > 2 && isInScreen(swipes[0].phone) && isInScreen(swipes[1].phone)){
+                swipes.clear()
+                return false
+            }
+
+            // If there is only one phone in virtual screen, or 2 and both are interacting in this connection, reset virtual screen
             if(phones.size == 1){
                 resetScreen()
             }
@@ -74,13 +80,12 @@ class VirtualScreen {
 
             swipes.clear()
 
+            // Update host position
             for(phone in phones){
                 if (phone.isHost){
                     hostChangeCallback(phone)
                 }
             }
-
-            Log.d("SCREEN PHONES", phones.size.toString())
 
             return true
         }
@@ -106,31 +111,25 @@ class VirtualScreen {
 
         phoneB.rotation = getBRotation(swipeA, swipeB)
 
-        Log.d("New Phone Rotation", phoneB.rotation.toString())
-
-        recalculateScreen()
-
         phoneB.position = getBPositionAndUpdateScreen(swipeA, swipeB, phoneB)
 
-        Log.d("New Phone Position", phoneB.position.toString())
-
-        phones.add(phoneB)
+        if(phoneB.isHost){
+            // Copy in case of host, so that thisPhone state isn't tied to object in virtual screen
+            phones.add(phoneB.copy())
+        }
+        else{
+            phones.add(phoneB)
+        }
 
         Log.d("SCREEN", "Phone Added ${phoneB.phoneName}")
         Log.d("SCREEN PHONE COUNT", phones.size.toString())
-
-        if(DPI>phoneB.DPI){
-            DPI = phoneB.DPI
-        }
     }
 
     fun removePhone(phone: Phone){
-        if(isInScreen(phone)){
-            val phoneToRemove = getPhoneInScreen(phone)
-            phones.remove(phoneToRemove)
+        val index = phones.indexOfFirst { it.id == phone.id }
+        if (index != -1) {
+            phones.removeAt(index)
             recalculateScreen()
-            Log.d("SCREEN", "Phone Removed ${phone.phoneName}")
-            Log.d("SCREEN PHONE COUNT", phones.size.toString())
         }
     }
 
@@ -163,9 +162,14 @@ class VirtualScreen {
     fun addFirstPhone(phone: Phone){
         phone.position = Position(0, 0)
         phone.rotation = 0
-        phones.add(phone)
 
-        DPI = phone.DPI
+        if (phone.isHost){
+            phones.add(phone.copy())
+        }
+        else {
+            phones.add(phone)
+        }
+
         height = phone.height
         width = phone.width
     }
@@ -186,27 +190,17 @@ class VirtualScreen {
         val edgeA = swipeA.edge
         val edgeB = swipeB.edge
 
-        Log.d("EdgeA", swipeA.edge.toString())
-        Log.d("EdgeB", swipeB.edge.toString())
-
         //Gets ordinal difference from edge Enum - (LEFT, RIGHT, TOP, BOTTOM, NONE)
         // (Can't be NONE)
         val diff = edgeA.ordinal - edgeB.ordinal
 
-        if(kotlin.math.abs(diff) == 2){
-            return swipeA.phone.rotation
-        }
-        else if (diff == 0){
-            return swipeA.phone.rotation + 180
-        }
-        else if (diff == -1 || diff == 3){
-            return swipeA.phone.rotation + 90
-        }
-        else if (diff == 1 || diff == -3){
-            return swipeA.phone.rotation - 90
+        when (diff) {
+            0 -> return swipeA.phone.rotation + 180
+            -1, 3 -> return swipeA.phone.rotation + 90
+            1, -3 -> return swipeA.phone.rotation - 90
         }
 
-        return 0
+        return swipeA.phone.rotation
     }
 
     private fun getBPositionAndUpdateScreen(swipeA: Swipe, swipeB: Swipe, phoneB: Phone): Position{
@@ -214,78 +208,92 @@ class VirtualScreen {
         val centerA = Position(swipeA.phone.width / 2, swipeA.phone.height / 2)
         val centerB = Position(swipeB.phone.width / 2, swipeB.phone.height / 2)
 
-        Log.d("A Center", centerA.toString())
-        Log.d("B Center", centerB.toString())
-
         val swipeAPos = swipeA.connectionPoint
         val swipeBPos = swipeB.connectionPoint
 
-        Log.d("A Con point", swipeAPos.toString())
-        Log.d("B Con point", swipeBPos.toString())
-
         // Center devices
-        var change = centerB.centerBy(centerA)
+        var change = center(centerA, centerB)
 
-        Log.d("Centered", change.toString())
 
         var changeA = Position(swipeAPos.x - centerA.x, swipeAPos.y - centerA.y)
         var changeB = Position(centerB.x - swipeBPos.x, centerB.y - swipeBPos.y)
 
-        Log.d("Change A", changeA.toString())
-        Log.d("Change B", changeB.toString())
-
         // Center of phone B is positioned on the connection point of phone A
         change += changeA
-        Log.d("Change with A", change.toString())
 
-        // ADD GAP
-        when(swipeB.edge){
-            Edge.LEFT -> changeB.x += GAP
-            Edge.TOP -> changeB.y += GAP
-            Edge.RIGHT -> changeB.x -= GAP
-            Edge.BOTTOM -> changeB.y -= GAP
+        // Add gap from set bezel size
+        when(swipeA.edge){
+            Edge.LEFT -> change.x -= getGap(swipeA.phone.borderHor)
+            Edge.TOP -> change.y -= getGap(swipeA.phone.borderVert)
+            Edge.RIGHT -> change.x += getGap(swipeA.phone.borderHor)
+            Edge.BOTTOM -> change.y += getGap(swipeA.phone.borderVert)
             Edge.NONE -> {}
         }
 
-        // Relative rotation between phones
+        when(swipeB.edge){
+            Edge.LEFT -> changeB.x += getGap(swipeB.phone.borderHor)
+            Edge.TOP -> changeB.y += getGap(swipeB.phone.borderVert)
+            Edge.RIGHT -> changeB.x -= getGap(swipeB.phone.borderHor)
+            Edge.BOTTOM -> changeB.y -= getGap(swipeB.phone.borderVert)
+            Edge.NONE -> {}
+        }
+
+        // Relative rotation between both phones
         val rotation = phoneB.rotation - swipeA.phone.rotation
 
         if(abs(rotation) == 90){
-
-            // Adjust position with rotation
-            change.x = change.x - (centerB.y - centerB.x)
-            change.y = change.y + (centerB.y - centerB.x)
-            Log.d("Change after ROT", change.toString())
+            // Adjust B position with rotation
+            change.x -= (centerB.y - centerB.x)
+            change.y += (centerB.y - centerB.x)
 
             // Adjust B change with rotation
-            changeB = changeB.rotate(rotation)
-            Log.d("ChangeB after ROT", changeB.toString())
+            changeB = rotate(changeB, rotation)
         }
         else if(abs(rotation) == 180){
-            changeB = changeB.rotate(rotation)
-            Log.d("ChangeB after ROT", changeB.toString())
+            // Adjust B change with rotation
+            changeB = rotate(changeB, rotation)
         }
 
         // Phone B position relative to phone A
         change += changeB
 
-        Log.d("Change TOGETHER", change.toString())
-
         var posA = swipeA.phone.position
-        Log.d("PhoneA", posA.toString())
 
         // Get phone B position in screen
         var posB = Position(posA.x + change.x, posA.y + change.y)
 
-        Log.d("PhoneB", posB.toString())
-
+        // Update screen information with new device
         updateScreen(posB, phoneB)
 
         return posB
     }
 
+    private fun rotate(position: Position, rotation: Int): Position{
+        when(rotation){
+            90 -> return(Position(-position.y, position.x))
+            -90 -> return(Position(position.y, -position.x))
+            180 -> return(Position(-position.x, -position.y))
+        }
+
+        return position
+    }
+
+    // Get bezel size in pixels
+    private fun getGap(gapMM : Double) : Int {
+        return (gapMM * mmToInch * DPI).toInt()
+    }
+
+    private fun center (centerA : Position, centerB: Position) : Position {
+        return Position((centerA.x - centerB.x), (centerA.y - centerB.y))
+    }
     private fun updateScreen(posB: Position, phoneB: Phone){
-        // Check if phone B goes outside screen, if it does, change screen
+        // Check if phone B goes outside screen, if it does, update screen
+
+        // If the new phone goes outside the screen with a negative position value,
+        // and all phones are shifter by the value and new phone takes position value 0
+
+        // If the new phone goes outside the screen with a positive position value,
+        // it keeps the position and virtual screen size is adjusted
         if(kotlin.math.abs(phoneB.rotation) == 90){
             if (posB.x < 0){
                 // Add difference to screen width
@@ -342,6 +350,7 @@ class VirtualScreen {
         }
     }
 
+    // Shifts all phones in the screen by a set amount
     private fun shiftPhones(change: Position){
         for(phone in phones){
             phone.position += change
@@ -349,12 +358,9 @@ class VirtualScreen {
     }
 
     private fun resetScreen(){
-        Log.d("SCREEN RESET", "Reset")
-
         phones.clear()
         height = 0
         width = 0
-        DPI = 0
     }
 
     fun isInScreenById(id : String): Boolean{
@@ -367,6 +373,48 @@ class VirtualScreen {
         return false
     }
 
+    // Function to allow live device bezel size change, scrapped for now
+    fun updatePhone(updatedPhone: Phone, hostChangeCallback: (Phone) -> Unit): Boolean {
+        val index = phones.indexOfFirst { it.id == updatedPhone.id }
+
+        if (index != -1) {
+
+            val horChange = getGap(updatedPhone.borderHor - phones[index].borderHor)
+            val vertChange = getGap(updatedPhone.borderVert - phones[index].borderVert)
+
+            phones[index].borderHor = updatedPhone.borderHor
+            phones[index].borderVert = updatedPhone.borderVert
+
+            if(phones[index].position.x > 0 && phones[index].position.y > 0) {
+                phones[index].position.x += horChange
+                phones[index].position.y += horChange
+            }
+
+            var host: Phone? = null
+
+            for(phone in phones){
+                if (phone.position.x >= updatedPhone.position.x){
+                    phone.position.x += horChange
+                }
+                if (phone.position.y >= updatedPhone.position.y){
+                    phone.position.y += vertChange
+                }
+
+                if (phone.isHost){
+                    host = phone
+                }
+            }
+
+            recalculateScreen()
+
+            if (host != null) {
+                hostChangeCallback(host)
+            }
+            return true
+        }
+        return false
+    }
+
     private fun getPhoneInScreen(phoneObj: Phone):Phone{
         for(phone in phones){
             if(phone.id == phoneObj.id){
@@ -374,6 +422,15 @@ class VirtualScreen {
             }
         }
         return phoneObj
+    }
+
+    private fun getPhoneById(id : String): Any {
+        for(phone in phones){
+            if(phone.id == id){
+                return phone
+            }
+        }
+        return false
     }
 
 }
